@@ -22,3 +22,8 @@
 2026-02-04 17:52:57 [INFO]: POST /admin/spawn - IP: ::1
 2026-02-04 17:53:18 [INFO]: POST /game/position - IP: ::1
 2026-02-04 17:53:40 [INFO]: POST /game/action - IP: ::1
+2026-02-04 19:02:10 [INFO]: GET / - IP: ::1
+2026-02-04 19:02:10 [INFO]: GET /static/index.html - IP: ::1
+2026-02-04 19:02:10 [INFO]: GET /favicon.ico - IP: ::1
+2026-02-04 19:42:36 [INFO]: GET / - IP: ::1
+2026-02-04 19:42:36 [INFO]: GET /static/index.html - IP: ::1

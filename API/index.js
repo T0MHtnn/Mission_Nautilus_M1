@@ -1,5 +1,6 @@
 import express from 'express';
 import { accessLogger, eventLogger } from './utils/logger.js';
+import { startTtlCleanup } from './utils/ttl-manager.js';
 import gameRouter from './routes/game.js';
 import adminRouter from './routes/admin.js';
 
@@ -34,6 +35,9 @@ app.use((req, res) => {
 });
 
 // --- FIN SECTION 2.1 ---
+
+// Démarrer le nettoyage automatique des objets expirés
+startTtlCleanup();
 
 app.listen(PORT, () => {
 	eventLogger.info(`Serveur lancé sur http://localhost:${PORT}`);

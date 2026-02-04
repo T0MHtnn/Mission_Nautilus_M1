@@ -1,35 +1,35 @@
 <!DOCTYPE html>
 <html lang="fr">
-
 <head>
     <meta charset="UTF-8">
-    <title>Zanzibar - Accueil</title>
+    <title>Zanzibar API</title>
     <style>
         body {
-            font-family: sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            background-color: #f0f0f0;
-        }
-
-        .card {
-            background: white;
+            font-family: Arial, sans-serif;
             padding: 2rem;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            max-width: 800px;
+            margin: 0 auto;
         }
     </style>
 </head>
-
 <body>
-    <div class="card">
-        <h1>Zanzibar API</h1>
-        <p>Le serveur est opérationnel.</p>
-        <p>Statut : <span style="color: green;">Connecté</span></p>
-    </div>
+    <h1>Zanzibar API</h1>
+    <p>Serveur opérationnel sur port 3000</p>
+    <h2>Routes disponibles</h2>
+    <h3>Game</h3>
+    <ul>
+        <li>POST /game/position</li>
+        <li>GET /game/resources</li>
+        <li>POST /game/process-object</li>
+        <li>POST /game/capture-rival</li>
+        <li>GET /game/zrr</li>
+    </ul>
+    <h3>Admin</h3>
+    <ul>
+        <li>POST /admin/zrr</li>
+        <li>POST /admin/ttl</li>
+        <li>POST /admin/player-role</li>
+        <li>POST /admin/spawn-object</li>
+    </ul>
 </body>
-
 </html>
