@@ -1,0 +1,15 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 14
+    },
+    "auditLog": "log\\.481f5a7f207d18d039d9469cad75c8317be0e1cf-audit.json",
+    "files": [
+        {
+            "date": 1770221865538,
+            "name": "log\\access-zanzibar-api-2026-02-04.log",
+            "hash": "3e937a01e13936c3bd7be2857627c5cd7c64dc86621ae4fd70afba20b5ef2818"
+        }
+    ],
+    "hashType": "sha256"
+}
