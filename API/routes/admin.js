@@ -15,7 +15,7 @@ const router = express.Router();
 router.post('/zrr', validateToken, requireAdmin, (req, res) => {
 	try {
 		const { p1, p2 } = req.body;
-		
+
 		// Validation
 		if (!p1 || !p2 || p1.length !== 2 || p2.length !== 2) {
 			return res.status(400).json({ error: "Format invalide. Requis: p1 [lat, lon], p2 [lat, lon]" });
@@ -37,7 +37,7 @@ router.post('/zrr', validateToken, requireAdmin, (req, res) => {
 		gameState.zrr.limits = limits;
 
 		eventLogger.info(`Admin a défini la ZRR: NO=[${limits.no}], NE=[${limits.ne}], SE=[${limits.se}], SO=[${limits.so}]`);
-		
+
 		res.json({
 			status: "ZRR définie avec succès",
 			limits: limits
@@ -56,7 +56,7 @@ router.post('/zrr', validateToken, requireAdmin, (req, res) => {
 router.post('/ttl', validateToken, requireAdmin, (req, res) => {
 	try {
 		const { ttl } = req.body;
-		
+
 		// Validation
 		if (typeof ttl !== 'number' || ttl <= 0) {
 			return res.status(400).json({ error: "TTL doit être un nombre positif (en secondes)" });
@@ -65,7 +65,7 @@ router.post('/ttl', validateToken, requireAdmin, (req, res) => {
 		gameState.defaultTTL = ttl;
 
 		eventLogger.info(`Admin a fixé le TTL par défaut à ${ttl} secondes`);
-		
+
 		res.json({
 			status: "TTL mis à jour",
 			defaultTTL: gameState.defaultTTL
@@ -84,7 +84,7 @@ router.post('/ttl', validateToken, requireAdmin, (req, res) => {
 router.post('/player-role', validateToken, requireAdmin, (req, res) => {
 	try {
 		const { login, role } = req.body;
-		
+
 		// Validation
 		if (!login) {
 			return res.status(400).json({ error: "Login requis" });
@@ -98,16 +98,16 @@ router.post('/player-role', validateToken, requireAdmin, (req, res) => {
 		if (!gameState.players[login]) {
 			// Créer le joueur s'il n'existe pas
 			gameState.players[login] = {
-				role: role,
+				role: role.toLowerCase(),
 				score: 0,
 				objectsProcessed: 0
 			};
 		} else {
-			gameState.players[login].role = role;
+			gameState.players[login].role = role.toLowerCase();
 		}
 
 		eventLogger.info(`Admin a assigné le rôle '${role}' au joueur ${login}`);
-		
+
 		res.json({
 			status: "Rôle mis à jour",
 			login: login,
@@ -127,7 +127,7 @@ router.post('/player-role', validateToken, requireAdmin, (req, res) => {
 router.post('/spawn-object', validateToken, requireAdmin, (req, res) => {
 	try {
 		const { position, type } = req.body;
-		
+
 		// Validation
 		if (!position || position.length !== 2) {
 			return res.status(400).json({ error: "Format invalide. Requis: position [lat, lon]" });
@@ -144,7 +144,7 @@ router.post('/spawn-object', validateToken, requireAdmin, (req, res) => {
 		gameState.objects.push(newObj);
 
 		eventLogger.info(`Admin a créé l'objet ${newObj.id} (${newObj.type}) en [${position[0]}, ${position[1]}] avec TTL=${newObj.ttl}s`);
-		
+
 		res.json({
 			status: "Objet créé avec succès",
 			object: newObj
@@ -163,7 +163,7 @@ router.get('/status', validateToken, requireAdmin, (req, res) => {
 	try {
 		const playerCount = Object.keys(gameState.players).length;
 		const objectCount = gameState.objects.length;
-		
+
 		const playersByRole = {
 			rival: 0,
 			explorateur: 0,

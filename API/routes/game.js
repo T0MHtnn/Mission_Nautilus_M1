@@ -13,8 +13,9 @@ const router = express.Router();
  */
 router.post('/position', validateToken, (req, res) => {
 	try {
-		const { login, position } = req.body;
-		
+		const { position } = req.body;
+		const login = req.user.login;
+
 		// Validation
 		if (!login || !position || position.length !== 2) {
 			return res.status(400).json({ error: "Format invalide. Requis: login et position [lat, lon]" });
@@ -22,13 +23,44 @@ router.post('/position', validateToken, (req, res) => {
 
 		// Initialiser le joueur s'il n'existe pas
 		if (!gameState.players[login]) {
-			gameState.players[login] = { role: 'explorateur', score: 0, objectsProcessed: 0 };
+			gameState.players[login] = {
+				role: req.user.role.toLowerCase(),
+				score: 0,
+				objectsProcessed: 0
+			};
+		} else {
+			gameState.players[login].role = req.user.role.toLowerCase();
 		}
 
 		gameState.players[login].position = position;
 		eventLogger.info(`Joueur ${login} a mis à jour sa position : [${position[0]}, ${position[1]}]`);
-		
-		res.json({ status: "OK", message: "Position mise à jour" });
+
+		let responseMessage = "Position mise à jour";
+
+		if (gameState.zrr.limits) {
+			const inside = isInsideZRR(position, gameState.zrr.limits);
+			if (!inside) {
+				// Ajout d'un flag dans l'objet joueur pour indiquer qu'il est hors zone
+				gameState.players[login].isOutOfZone = true;
+				eventLogger.warn(`Joueur ${login} est SORTI de la ZRR !`);
+				responseMessage += " (Attention : vous êtes hors de la zone de jeu !)";
+			} else {
+				gameState.players[login].isOutOfZone = false;
+			}
+		}
+
+		gameState.objects.forEach(obj => {
+			if (obj.type === 'creature' && calculateDistance(position, obj.position) < 5) {
+				gameState.players[login].isDead = true;
+				eventLogger.warn(`${login} a été dévoré par une créature !`);
+			}
+		});
+
+		if (gameState.players[login].isDead) {
+			return res.status(403).json({ error: "Vous avez été éliminé (dévoré)" });
+		}
+
+		res.json({ status: "OK", message: responseMessage });
 	} catch (error) {
 		eventLogger.error(`Erreur mise à jour position: ${error.message}`);
 		res.status(500).json({ error: "Erreur serveur" });
@@ -46,8 +78,8 @@ router.post('/position', validateToken, (req, res) => {
  */
 router.get('/resources', validateToken, (req, res) => {
 	try {
-		const { login } = req.query;
-		
+		const login = req.user.login;
+
 		if (!login || !gameState.players[login]) {
 			return res.status(404).json({ error: "Joueur non trouvé" });
 		}
@@ -59,13 +91,13 @@ router.get('/resources', validateToken, (req, res) => {
 			.filter(([name, p]) => {
 				// Ne pas renvoyer l'utilisateur lui-même
 				if (name === login) return false;
-				
+
 				// Les rivaux ne sont pas affichés (sauf pour les autres rivaux et l'admin)
 				if (p.role === 'rival' && user.role === 'explorateur') return false;
-				
+
 				// Les administrateurs ne sont jamais affichés
 				if (p.role === 'admin') return false;
-				
+
 				// Doit avoir une position
 				return p.position !== undefined;
 			})
@@ -78,27 +110,62 @@ router.get('/resources', validateToken, (req, res) => {
 
 		// Filtrer les objets actifs (TTL > 0)
 		const currentTime = Date.now();
+		let alerts = [];
+
 		const activeObjects = gameState.objects
 			.filter(obj => {
 				const elapsed = (currentTime - obj.createdAt) / 1000;
 				const remainingTtl = obj.ttl - elapsed;
-				return remainingTtl > 0;
+				const distance = calculateDistance(user.position, obj.position);
+				return remainingTtl > 0 && distance < 500;
 			})
 			.map(obj => {
 				const elapsed = (currentTime - obj.createdAt) / 1000;
+				let finalPosition = obj.position;
+
+				//Position floue pour les explorateurs
+				if (user.role === 'explorateur') {
+					const dist = Math.random() * 0.0001;
+					const angle = Math.random() * 2 * Math.PI;
+					finalPosition = [
+						obj.position[0] + Math.cos(angle) * dist,
+						obj.position[1] + Math.sin(angle) * dist
+					];
+
+					//Alerte si un rival est proche d'un objet (25m)
+					Object.values(gameState.players).forEach(p => {
+						if (p.role === 'rival' && p.position) {
+							if (calculateDistance(p.position, obj.position) < 25) {
+								alerts.push("Alerte : Un rival rôde près d'une ressource !");
+							}
+						}
+					});
+				}
+
 				return {
 					id: obj.id,
-					position: obj.position,
+					position: finalPosition,
 					type: obj.type,
 					ttl: Math.max(0, obj.ttl - elapsed)
 				};
 			});
 
 		eventLogger.info(`${login} a demandé la liste des ressources (${visiblePlayers.length} joueurs, ${activeObjects.length} objets)`);
-		
+
+		//Préparer la liste des objets déjà traités
+		const processedObjectsList = gameState.processedObjects.map(obj => ({
+			id: obj.id,
+			position: obj.position,
+			type: obj.type,
+			status: "processed",
+			by: obj.processedBy
+		}));
+
 		res.json({
 			players: visiblePlayers,
-			objects: activeObjects
+			objects: activeObjects,
+			processedObjects: processedObjectsList,
+			alerts: [...new Set(alerts)]
 		});
 	} catch (error) {
 		eventLogger.error(`Erreur récupération ressources: ${error.message}`);
@@ -113,42 +180,64 @@ router.get('/resources', validateToken, (req, res) => {
  */
 router.post('/process-object', validateToken, (req, res) => {
 	try {
-		const { login, objectId } = req.body;
-		
-		if (!login || !objectId) {
-			return res.status(400).json({ error: "Format invalide. Requis: login et objectId" });
+		const { objectId } = req.body;
+		const login = req.user.login;
+
+		if (!objectId) {
+			return res.status(400).json({ error: "Format invalide. Requis: objectId" });
+		}
+
+		// Initialiser le joueur s'il n'existe pas encore dans le gameState
+		if (!gameState.players[login]) {
+			gameState.players[login] = {
+				role: req.user.role.toLowerCase(),
+				score: 0,
+				objectsProcessed: 0
+			};
+		} else {
+			gameState.players[login].role = req.user.role.toLowerCase();
 		}
 
 		const user = gameState.players[login];
-		if (!user || !user.position) {
-			return res.status(404).json({ error: "Joueur non trouvé ou sans position" });
+
+		// Vérifier si le joueur a une position pour calculer la distance
+		if (!user.position) {
+			return res.status(400).json({ error: "Position du joueur inconnue. Envoyez votre position d'abord." });
 		}
+
+		const maxDistance = (user.role === 'explorateur') ? 10 : 5;
 
 		const objIndex = gameState.objects.findIndex(o => o.id === objectId);
 		if (objIndex === -1) {
-			return res.status(404).json({ error: "Objet non trouvé" });
+			return res.status(404).json({ error: "Objet non trouvé ou expiré" });
 		}
 
 		const obj = gameState.objects[objIndex];
 		const distance = calculateDistance(user.position, obj.position);
 
-		// Vérifier la distance (5m = 0.005 km = 5000m)
-		if (distance > 5) {
+		// Vérifier la distance
+		if (distance > maxDistance) {
 			eventLogger.warn(`${login} a tenté de traiter ${objectId} à ${distance.toFixed(2)}m (trop loin)`);
-			return res.status(403).json({ 
-				error: "Objet trop loin", 
+			return res.status(403).json({
+				error: "Trop loin pour collecter",
 				distance: distance.toFixed(2),
-				requiredDistance: 5
+				maxAutorisee: maxDistance
 			});
 		}
 
 		// Traiter l'objet
-		gameState.objects.splice(objIndex, 1);
+		const [processedObj] = gameState.objects.splice(objIndex, 1);
+		gameState.processedObjects.push({
+			...processedObj,
+			processedBy: login,
+			processedAt: Date.now()
+		});
+
 		user.score = (user.score || 0) + 1;
 		user.objectsProcessed = (user.objectsProcessed || 0) + 1;
 
 		eventLogger.info(`${login} a traité l'objet ${objectId} (${obj.type}) - Score: ${user.score}`);
-		
+
 		res.json({
 			success: true,
 			message: "Objet traité avec succès",
@@ -168,8 +257,9 @@ router.post('/process-object', validateToken, (req, res) => {
  */
 router.post('/capture-rival', validateToken, (req, res) => {
 	try {
-		const { login, rivalId } = req.body;
-		
+		const { rivalId } = req.body;
+		const login = req.user.login;
+
 		if (!login || !rivalId) {
 			return res.status(400).json({ error: "Format invalide. Requis: login et rivalId" });
 		}
@@ -209,7 +299,7 @@ router.post('/capture-rival', validateToken, (req, res) => {
 		user.rivalsCaptuered = (user.rivalsCaptuered || 0) + 1;
 
 		eventLogger.info(`${login} (explorateur) a capturé le rival ${rivalId} - Nouveau score: ${user.score}`);
-		
+
 		res.json({
 			success: true,
 			message: "Rival capturé avec succès",
@@ -224,12 +314,12 @@ router.post('/capture-rival', validateToken, (req, res) => {
 
 /**
  * 5. GET /game/zrr
- * Récupère les limites de la Zone de Recherche et Récupération
+ * Récupère les limites de la Zone de Recherche et Récupération (ZRR)
  */
 router.get('/zrr', validateToken, (req, res) => {
 	try {
 		const zrr = gameState.zrr;
-		
+
 		if (!zrr.limits) {
 			return res.json({
 				defined: false,
@@ -246,5 +336,26 @@ router.get('/zrr', validateToken, (req, res) => {
 		res.status(500).json({ error: "Erreur serveur" });
 	}
 });
+
+/**
+ * Fonction utilitaire pour vérifier si une position est à l'intérieur des limites de la ZRR
+ * @param {*} position 
+ * @param {*} zrrLimits 
+ * @returns 
+ */
+const isInsideZRR = (position, zrrLimits) => {
+	// Si pas de ZRR, on considère qu'il est "dedans" par défaut
+	if (!zrrLimits) {
+		return true;
+	}
+
+	const [lat, lon] = position;
+	const { no, se } = zrrLimits;
+
+	return (
+		lat <= no[0] && lat >= se[0] &&
+		lon >= no[1] && lon <= se[1]
+	);
+};
 
 export default router;
