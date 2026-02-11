@@ -1,4 +1,5 @@
 import express from 'express';
+import cors from 'cors';
 import { accessLogger, eventLogger } from './utils/logger.js';
 import { startTtlCleanup } from './utils/ttl-manager.js';
 import gameRouter from './routes/game.js';
@@ -6,6 +7,10 @@ import adminRouter from './routes/admin.js';
 
 const app = express();
 const PORT = 3000;
+
+app.use(cors({
+	origin: 'http://localhost:3306'
+}));
 
 app.use(express.json());
 
