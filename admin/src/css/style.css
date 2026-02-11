@@ -1,0 +1,127 @@
+@font-face {
+    font-family: _h1_;
+    src: url(./fonts/Webfonts/PaytoneOne-Regular.woff);
+}
+
+@font-face {
+    font-family: _h2_;
+    src: url(./fonts/Forum-Regular.otf);
+}
+
+@font-face {
+    font-family: _strong_;
+    src: url(./fonts/Webfonts/RobotoSlab-Bold.woff);
+}
+
+@font-face {
+    font-family: _normal_;
+    src: url(./fonts/Webfonts/RobotoSlab-Regular.woff);
+}
+
+
+body {
+    background-color: #081F1F;
+    color: silver;
+    font-family: _normal_;
+    padding: 0 5% 0 5%;
+}
+
+.b {
+    background-image: url('../img/bg1.jpg');
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-blend-mode: screen;
+    opacity: 1;
+}
+
+h1 {
+    color: #535C4A;
+    font-family: _h1_;
+    font-weight: bolder;
+    font-size: 4.5em;
+    text-shadow: 3px 3px 5px ghostwhite;
+}
+
+h2 {
+    font-family: _h2_;
+    font-weight: bold;
+    font-size: 2.2em;
+    color: darkslategrey;
+    background-color: lightgray;
+    margin: 0;
+    border-radius: 18px 18px 0 0;
+    line-height: 1.2em;
+    padding: 0.15em 20px;
+}
+
+strong {
+    font-family: _strong_;
+    font-weight: bold;
+}
+
+a:link {
+    color: lightgray;
+}
+
+#map {
+    height: 400px;
+    border: 1px solid;
+    margin: 0 1em 0.5em;
+}
+
+input,
+input[type=submit],
+select,
+button {
+    background-color: #dfcba2 !important;
+    color: darkslategrey !important;
+    border: 1px solid !important;
+    border-radius: 5px !important;
+    margin-bottom: .3em;
+}
+
+input[type=submit].iconic {
+    line-height: 2em;
+    vertical-align: middle;
+    line-height: 2em;
+}
+
+.elanor {
+    font-family: _h2_;
+    font-size: 3.2em;
+    text-align: right;
+    margin: 0.22em 0;
+}
+
+h1.pwd {
+    color: #dfcba2;
+    font-size: 1.5em;
+    text-shadow: none;
+    font-weight: bold;
+}
+
+section {
+    background-color: #3C473F;
+    border-radius: 20px;
+    padding: 0px;
+    margin-bottom: 1.5em;
+}
+
+.content {
+    padding: 5px;
+    margin: 0 20px;
+}
+
+.icon {
+    width: 50px;
+    border-radius: 50%;
+    opacity: 50%;
+}
+
+label:not(.first) {
+    margin-left: 1.5em;
+}
+
+.door>input {
+    display: inline-block !important;
+}
