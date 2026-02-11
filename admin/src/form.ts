@@ -1,3 +1,5 @@
+import L from 'leaflet';
+
 // Initialisation
 function initListeners(mymap: L.Map): void {
     console.log("TODO: add more event listeners...");
