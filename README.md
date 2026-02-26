@@ -1,5 +1,6 @@
 # **Zanzibar API**
-## Serveur de jeu de piste géolocalisé développé en Node.js avec Express. Ce serveur gère la logique métier, la sécurité via un backoffice Java et la persistance de l'état du jeu en mémoire.
+### Serveur de jeu de piste géolocalisé développé en Node.js avec Express.
+### Ce serveur gère la logique métier, la sécurité via un backoffice Java et la persistance de l'état du jeu en mémoire.
 
 
 **Installation**
@@ -28,6 +29,7 @@
 
  - Gestion des Rôles : Accès restreint aux routes /admin (rôle admin) et gestion des types explorer / rival.
 
+
 *Logique Spatiale*
 
  - ZRR (Zone à Régime Restreint) : Définition d'un périmètre rectangulaire. Alerte dynamique dans la réponse JSON si un joueur sort de la zone.
@@ -39,6 +41,7 @@
    - Floutage des positions des objets pour les explorateurs.
 
    - Positions réelles pour les rivaux.
+
 
 *Gameplay*
 
@@ -52,7 +55,6 @@
 
 
 **Structure du Projet**
-
 
 
  - index.js : Point d'entrée et configuration Express.
@@ -75,16 +77,16 @@
 L'API a été testée en utilisant **Jasmine**. Les tests couvrent les points suivants :
 
 ### **Côté API (Serveur)**
-* Utilisation de Jasmine en mode ES Modules.
+  * Utilisation de Jasmine en mode ES Modules.
 
-* Tests de la logique métier exportée dans src/logic.js.
+  * Tests de la logique métier exportée dans src/logic.js.
 
-* Validation des règles de gestion de la ZRR et du TTL.
+  * Validation des règles de gestion de la ZRR et du TTL.
 
 ### **Côté Admin (Client)**
-* Tests des utilitaires de conversion de données.
+  * Tests des utilitaires de conversion de données.
 
-* Vérification de la récupération des bounds de la carte.
+  * Vérification de la récupération des bounds de la carte.
 
 
 ## **Pour lancer les tests localement :**
