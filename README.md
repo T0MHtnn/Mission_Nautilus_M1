@@ -1,6 +1,5 @@
 # **Zanzibar API**
-### Serveur de jeu de piste géolocalisé développé en Node.js avec Express.
-### Ce serveur gère la logique métier, la sécurité via un backoffice Java et la persistance de l'état du jeu en mémoire.
+### Serveur de jeu de piste géolocalisé développé en Node.js avec Express. Il gère la logique métier, la sécurité via un backoffice Java et la persistance de l'état du jeu en mémoire.
 
 
 **Installation**
