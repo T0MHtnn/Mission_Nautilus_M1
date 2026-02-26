@@ -1,26 +1,25 @@
 // Generated using webpack-cli https://github.com/webpack/webpack-cli
-
 const path = require('path');
+const webpack = require('webpack'); // AJOUTÉ pour gérer les variables globales
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const webpack = require('webpack');
 
 const isProduction = process.env.NODE_ENV === 'production';
 
-
 const stylesHandler = isProduction ? MiniCssExtractPlugin.loader : 'style-loader';
-
-
 
 const config = {
     entry: './src/index.ts',
     output: {
         path: path.resolve(__dirname, 'dist'),
+        // Important pour que les assets soient cherchés au bon endroit sur la VM
+        publicPath: isProduction ? '/admin/' : '/',
     },
     devServer: {
         open: true,
         host: 'localhost',
-        port: 3306
+        port: 3306, // Port demandé dans le sujet
     },
     plugins: [
         new HtmlWebpackPlugin({
@@ -47,14 +46,10 @@ const config = {
                 test: /\.(eot|svg|ttf|woff|woff2|png|jpg|gif)$/i,
                 type: 'asset',
             },
-
             {
                 test: /\.html$/i,
                 use: ['html-loader'],
             },
-
-            // Add your rules for custom modules here
-            // Learn more about loaders from https://webpack.js.org/loaders/
         ],
     },
     resolve: {
@@ -65,10 +60,7 @@ const config = {
 module.exports = () => {
     if (isProduction) {
         config.mode = 'production';
-
         config.plugins.push(new MiniCssExtractPlugin());
-
-
     } else {
         config.mode = 'development';
     }

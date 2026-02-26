@@ -1,0 +1,48 @@
+image: node:24-alpine
+
+stages:
+  - build_test
+  - deploy
+
+# --- PARTIE API ---
+
+test-api:
+  stage: build_test
+  script:
+    - cd API
+    - npm install
+    - npx eslint .
+  only:
+    - main
+
+# --- PARTIE ADMIN (TP3) ---
+
+build-admin:
+  stage: build_test
+  script:
+    - cd admin
+    - npm install
+    - npm run build # Génère le dossier admin/dist/
+  artifacts:
+    paths:
+      - admin/dist/ # Crucial : transmet le dossier dist au job de déploiement
+    expire_in: 1 hour
+  only:
+    - main
+
+# --- DÉPLOIEMENT GLOBAL ---
+
+deploy-all:
+  stage: deploy
+  before_script:
+    # Installation des outils pour le transfert SSH (rsync)
+    - apk add --no-cache rsync openssh-client
+  script:
+    - echo "Déploiement de l'API et du Client Admin..."
+    # 1. Déploiement du client Admin vers Nginx
+    # - rsync -avz admin/dist/ $VM_USER@$VM_IP:/var/www/html/secret/
+    
+    # 2. Déploiement de l'API (ton script actuel)
+    - echo "Relance de PM2 pour l'API..."
+  only:
+    - main
