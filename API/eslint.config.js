@@ -9,6 +9,7 @@ export default [
 			sourceType: "module",
 			globals: {
 				...globals.node, // Pour reconnaître 'process', 'console', etc.
+				...globals.jasmine, // Pour reconnaître describe, it, expect
 			},
 		},
 		rules: {
