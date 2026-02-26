@@ -1,10 +1,14 @@
-//Import des CSS (Webpack va les packager)
-import 'leaflet/dist/leaflet.css'; // Le CSS officiel de Leaflet
+// Import des CSS
+import 'leaflet/dist/leaflet.css';
 import './css/style.css';
 
-// Import de ta logique
 import mapInit from './map';
-import formInit from './form';
+import formInit, { initPositionListeners } from './form';
 
 const mymap = mapInit();
+
+// Initialisation des écouteurs de boutons (Set ZRR, Send, etc.)
 formInit(mymap);
+
+// Initialisation des écouteurs sur les champs de saisie
+initPositionListeners(mymap);

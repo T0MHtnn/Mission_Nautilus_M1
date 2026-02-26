@@ -3,6 +3,7 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
+const webpack = require('webpack');
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -25,9 +26,11 @@ const config = {
         new HtmlWebpackPlugin({
             template: 'index.html',
         }),
-
-        // Add your plugins here
-        // Learn more about plugins from https://webpack.js.org/configuration/plugins/
+        new webpack.DefinePlugin({
+            __API_PATH__: isProduction
+                ? JSON.stringify('https://192.168.75.88/api')
+                : JSON.stringify('http://localhost:3000')
+        }),
     ],
     module: {
         rules: [

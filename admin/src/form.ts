@@ -1,17 +1,43 @@
+import { apiPath } from './config';
+
 // Initialisation
 function initListeners(mymap: L.Map): void {
-    console.log("TODO: add more event listeners...");
 
-    document.getElementById("setZrrButton").addEventListener("click", () => {
-        setZrr(mymap.getBounds());
-    });
+    const btnSetZrr = document.getElementById("setZrrButton");
+    if (btnSetZrr) {
+        btnSetZrr.addEventListener("click", () => setZrr(mymap.getBounds()));
+    }
 
-    document.getElementById("sendZrrButton").addEventListener("click", () => {
-        sendZrr();
-    });
+    const btnSendZrr = document.getElementById("sendZrrButton");
+    if (btnSendZrr) {
+        btnSendZrr.addEventListener("click", () => sendZrr());
+    }
 
-    document.getElementById("setTtlButton").addEventListener("click", () => {
-        setTtl();
+    const btnSetTtl = document.getElementById("setTtlButton");
+    if (btnSetTtl) {
+        btnSetTtl.addEventListener("click", () => setTtl());
+    }
+}
+
+export function initPositionListeners(mymap: L.Map): void {
+    const latInput = document.getElementById("lat") as HTMLInputElement;
+    const lonInput = document.getElementById("lon") as HTMLInputElement;
+    const zoomInput = document.getElementById("zoom") as HTMLInputElement;
+
+    const updateFromInputs = () => {
+        const lat = parseFloat(latInput.value);
+        const lon = parseFloat(lonInput.value);
+        const zoom = parseInt(zoomInput.value);
+        if (!isNaN(lat) && !isNaN(lon)) {
+            mymap.setView([lat, lon], zoom);
+        }
+    };
+
+    latInput.addEventListener("change", updateFromInputs);
+    lonInput.addEventListener("change", updateFromInputs);
+    zoomInput.addEventListener("input", () => {
+        updateFromInputs();
+        (document.getElementById("zoomValue") as HTMLElement).innerText = zoomInput.value;
     });
 }
 
@@ -23,6 +49,7 @@ function updateLatValue(lat: number): void {
 
 function updateLonValue(lng: number): void {
     const input = document.getElementById("lon") as HTMLInputElement;
+
     if (input) input.value = lng.toString();
 }
 
@@ -53,7 +80,7 @@ async function sendZrr() {
     };
 
     try {
-        const response = await fetch('http://localhost:3000/admin/zrr', {
+        const response = await fetch(`${apiPath}/admin/zrr`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
@@ -71,7 +98,7 @@ async function setTtl() {
     const ttlValue = (document.getElementById("ttl") as HTMLInputElement).value;
 
     try {
-        const response = await fetch('http://localhost:3000/admin/ttl', {
+        const response = await fetch(`${apiPath}/admin/ttl`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ ttl: parseInt(ttlValue) })
