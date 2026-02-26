@@ -1,6 +1,5 @@
 // Generated using webpack-cli https://github.com/webpack/webpack-cli
 const path = require('path');
-const webpack = require('webpack'); // AJOUTÉ pour gérer les variables globales
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const webpack = require('webpack');
