@@ -1,5 +1,8 @@
 import L from 'leaflet';
-import { updateLatValue, updateLonValue } from './form';
+import { apiPath } from './config';
+import { updateLatValue, updateLonValue, updateZoomValue } from './form';
+
+let resourceLayer: L.LayerGroup;
 
 // initialisation de la map
 const lat = 45.782, lng = 4.8656, zoom = 19;
@@ -31,16 +34,37 @@ function initMap() {
         updateLonValue(e.latlng.lng);
     });
 
+    mymap.on('zoomend', () => {
+        updateZoomValue(mymap.getZoom());
+    });
+
+    resourceLayer = L.layerGroup().addTo(mymap);
     return mymap;
 }
 
 // Mise à jour de la map
 function updateMap(latlng: L.LatLngExpression, zoom: number): boolean {
-    // Affichage à la nouvelle position
     mymap.setView(latlng, zoom);
 
-    // La fonction de validation du formulaire renvoie false pour bloquer le rechargement de la page.
     return false;
 }
+
+async function fetchGameData() {
+    try {
+        const response = await fetch(`${apiPath}/api/resources`);
+        const data = await response.json();
+
+        resourceLayer.clearLayers();
+        data.forEach((res: any) => {
+            L.marker([res.lat, res.lon]).addTo(resourceLayer)
+                .bindPopup(`Ressource: ${res.name}`);
+        });
+    } catch (e) {
+        console.error("Erreur de récupération des données", e);
+    }
+}
+
+// Lance la mise à jour toutes les 5 secondes
+setInterval(fetchGameData, 5000);
 
 export default initMap;

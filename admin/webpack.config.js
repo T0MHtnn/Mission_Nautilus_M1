@@ -3,6 +3,7 @@ const path = require('path');
 const webpack = require('webpack'); // AJOUTÉ pour gérer les variables globales
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
+const webpack = require('webpack');
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -13,7 +14,7 @@ const config = {
     output: {
         path: path.resolve(__dirname, 'dist'),
         // Important pour que les assets soient cherchés au bon endroit sur la VM
-        publicPath: isProduction ? '/admin/' : '/', 
+        publicPath: isProduction ? '/admin/' : '/',
     },
     devServer: {
         open: true,
@@ -24,12 +25,10 @@ const config = {
         new HtmlWebpackPlugin({
             template: 'index.html',
         }),
-        
-        // Point 5 : Injection de l'URL de l'API selon l'environnement
         new webpack.DefinePlugin({
-            API_PATH: isProduction 
-                ? JSON.stringify('https://192.168.75.88/api') // URL de ta VM
-                : JSON.stringify('http://localhost:3000')      // URL locale
+            __API_PATH__: isProduction
+                ? JSON.stringify('https://192.168.75.88/api')
+                : JSON.stringify('http://localhost:3000')
         }),
     ],
     module: {

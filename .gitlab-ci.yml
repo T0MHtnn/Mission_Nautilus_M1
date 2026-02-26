@@ -12,8 +12,9 @@ test-api:
     - cd API
     - npm install
     - npx eslint .
-  only:
-    - main
+    - npm test
+  # only:
+  #   - main
 
 # --- PARTIE ADMIN (TP3) ---
 
