@@ -1,47 +1,88 @@
-<script setup lang="ts">
+<script lang="ts">
 import HelloWorld from './components/HelloWorld.vue'
-import TheWelcome from './components/TheWelcome.vue'
+import Login from './components/Login.vue'
+
+export default {
+  name: 'App',
+  components: { HelloWorld, Login },
+  data() {
+    return {
+      logged: false,
+    }
+  },
+  methods: {
+    onLoginSuccess() {
+      this.logged = true
+    },
+    handleLogout() {
+      this.logged = false
+      localStorage.removeItem('zanzibar_token')
+    },
+  },
+}
 </script>
 
 <template>
   <header>
-    <img alt="Vue logo" class="logo" src="./assets/logo.svg" width="125" height="125" />
-
-    <div class="wrapper">
-      <HelloWorld msg="You did it!" />
-    </div>
+    <h1>Zanzibar Mobile</h1>
+    <button @click="logged = !logged">Toggle login</button>
   </header>
 
   <main>
-    <TheWelcome />
+    <!-- Non connecté -->
+    <div v-if="!logged">
+      <HelloWorld msg="Bienvenue, veuillez vous connecter" />
+      <Login message="Connexion" @login-success="onLoginSuccess" />
+    </div>
+
+    <!-- Connecté -->
+    <div v-else>
+      <HelloWorld msg="Vous êtes connecté" />
+      <nav class="nav-bar">
+        <RouterLink to="/">Accueil</RouterLink>
+        <RouterLink to="/map">Carte</RouterLink>
+        <button @click="handleLogout">Se déconnecter</button>
+      </nav>
+      <hr />
+      <RouterView />
+    </div>
   </main>
 </template>
 
 <style scoped>
 header {
-  line-height: 1.5;
+  padding: 1rem;
+  border-bottom: 1px solid #ccc;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.logo {
-  display: block;
-  margin: 0 auto 2rem;
+.nav-bar {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  margin-bottom: 15px;
 }
 
-@media (min-width: 1024px) {
-  header {
-    display: flex;
-    place-items: center;
-    padding-right: calc(var(--section-gap) / 2);
-  }
+.nav-bar a {
+  color: #42b883;
+  text-decoration: none;
+  font-weight: bold;
+}
+.nav-bar a.router-link-active {
+  text-decoration: underline;
+}
 
-  .logo {
-    margin: 0 2rem 0 0;
-  }
-
-  header .wrapper {
-    display: flex;
-    place-items: flex-start;
-    flex-wrap: wrap;
-  }
+button {
+  cursor: pointer;
+  padding: 8px 15px;
+  background: #42b883;
+  color: white;
+  border: none;
+  border-radius: 4px;
+}
+button:hover {
+  background: #33a06f;
 }
 </style>
