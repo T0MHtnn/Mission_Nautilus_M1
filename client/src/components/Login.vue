@@ -3,7 +3,7 @@
     <h2>{{ message }}</h2>
 
     <label for="login">Login :&nbsp;</label>
-    <input type="text" name="login" id="login" v-model="username" />
+    <input type="text" name="login" id="login" v-model="loginInput" />
     <br />
     <label for="password">Password :&nbsp;</label>
     <input type="password" name="password" id="password" v-model="password" />
@@ -13,55 +13,36 @@
   </div>
 </template>
 
-<script lang="ts">
+<script>
+import { useGameStore } from "../stores/game";
+
 export default {
-  name: 'MyLogin',
+  name: "MyLogin",
   props: {
     message: String,
   },
-  emits: ['login-success'],
+  emits: ["login-success"],
   data() {
     return {
-      username: '',
-      password: '',
-      error: '',
-    }
+      loginInput: "",
+      password: "",
+      error: "",
+    };
   },
   methods: {
     async login() {
-      this.error = ''
-      try {
-        const response = await fetch('http://localhost:3000/api/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            login: this.username,
-            password: this.password,
-          }),
-        })
+      this.error = "";
+      const store = useGameStore();
 
-        if (!response.ok) {
-          this.error = 'Identifiants incorrects'
-          return
-        }
-
-        const data = await response.json()
-
-        if (data.token) {
-          // Stocker le token pour les futures requêtes
-          localStorage.setItem('zanzibar_token', data.token)
-          // Notifier le parent que le login a réussi
-          this.$emit('login-success')
-        } else {
-          this.error = 'Aucun token reçu'
-        }
-      } catch (e) {
-        console.error('Erreur de connexion', e)
-        this.error = 'Erreur réseau, vérifiez que le serveur est lancé'
+      const result = await store.doLogin(this.loginInput, this.password);
+      if (result.success) {
+        this.$emit("login-success");
+      } else {
+        this.error = result.error || "Échec de connexion";
       }
     },
   },
-}
+};
 </script>
 
 <style scoped>
@@ -75,7 +56,7 @@ export default {
 }
 
 input,
-input[type='submit'],
+input[type="submit"],
 select {
   color: grey;
   border: 1px solid;

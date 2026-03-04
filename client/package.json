@@ -8,7 +8,9 @@
     "build": "run-p type-check \"build-only {@}\" --",
     "preview": "vite preview",
     "build-only": "vite build",
-    "type-check": "vue-tsc --build"
+    "type-check": "vue-tsc --build",
+    "lint": "eslint . --fix",
+    "format": "prettier --write src/"
   },
   "dependencies": {
     "leaflet": "^1.9.4",
@@ -22,6 +24,7 @@
     "@types/node": "^24.11.0",
     "@vitejs/plugin-vue": "^6.0.4",
     "@vue/eslint-config-prettier": "^10.2.0",
+    "@vue/eslint-config-typescript": "^14.7.0",
     "@vue/tsconfig": "^0.8.1",
     "eslint": "^10.0.2",
     "eslint-plugin-vue": "^10.8.0",

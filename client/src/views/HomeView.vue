@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // On importe le composant que tu as créé tout à l'heure
-import PlayerStatus from '../components/PlayerStatus.vue'
+import PlayerStatus from "../components/PlayerStatus.vue";
 </script>
 
 <template>

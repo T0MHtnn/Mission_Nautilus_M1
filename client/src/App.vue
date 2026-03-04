@@ -1,31 +1,37 @@
 <script lang="ts">
-import HelloWorld from './components/HelloWorld.vue'
-import Login from './components/Login.vue'
+import HelloWorld from "./components/HelloWorld.vue";
+import Login from "./components/Login.vue";
+import { useGameStore } from "./stores/game";
 
 export default {
-  name: 'App',
+  name: "App",
   components: { HelloWorld, Login },
-  data() {
-    return {
-      logged: false,
-    }
+  computed: {
+    store() {
+      return useGameStore();
+    },
+    logged() {
+      return this.store.logged;
+    },
   },
   methods: {
     onLoginSuccess() {
-      this.logged = true
+      this.store.logged = true;
     },
     handleLogout() {
-      this.logged = false
-      localStorage.removeItem('zanzibar_token')
+      this.store.logout();
     },
   },
-}
+};
 </script>
 
 <template>
   <header>
     <h1>Zanzibar Mobile</h1>
-    <button @click="logged = !logged">Toggle login</button>
+    <span v-if="logged" class="user-info">
+      {{ store.login }} | Score: {{ store.localPlayer.score }}
+    </span>
+    <button @click="store.logged = !store.logged">Toggle login</button>
   </header>
 
   <main>
@@ -41,6 +47,7 @@ export default {
       <nav class="nav-bar">
         <RouterLink to="/">Accueil</RouterLink>
         <RouterLink to="/map">Carte</RouterLink>
+        <RouterLink to="/profile">Profil</RouterLink>
         <button @click="handleLogout">Se déconnecter</button>
       </nav>
       <hr />

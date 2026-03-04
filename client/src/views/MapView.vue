@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import MyMap from '../components/MyMap.vue'
+import MyMap from "../components/MyMap.vue";
 </script>
 
 <template>

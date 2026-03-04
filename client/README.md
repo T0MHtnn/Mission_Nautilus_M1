@@ -40,3 +40,13 @@ npm run dev
 ```sh
 npm run build
 ```
+
+
+dans la VM : 
+ run-users.sh --app-origin=5173
+connect to VM
+ ssh -i p2308972.pem p2308972@192.168.75.88
+
+ userjar 
+
+ java -jar users.jar --app.origin=http://localhost:5173

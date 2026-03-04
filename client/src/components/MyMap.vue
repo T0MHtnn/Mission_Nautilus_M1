@@ -2,68 +2,191 @@
   <section>
     <h2>Carte</h2>
     <p class="content">
-      <strong>TODO :</strong> mettre à jour les positions des différents objets sur la carte.
+      Joueurs : <strong>{{ store.players.length }}</strong> | Objets non
+      découverts : <strong>{{ store.undiscoveredObjects.length }}</strong> |
+      Objets découverts : <strong>{{ store.discoveredObjects.length }}</strong>
     </p>
     <div id="map" class="map" ref="map"></div>
   </section>
 </template>
 
 <script lang="ts">
-import 'leaflet/dist/leaflet.css'
-import L from 'leaflet'
-import type { LeafletMouseEvent, Map as LeafletMap, Marker } from 'leaflet'
+import "leaflet/dist/leaflet.css";
+import L from "leaflet";
+import type {
+  LeafletMouseEvent,
+  Map as LeafletMap,
+  Marker,
+  Rectangle,
+} from "leaflet";
+import { useGameStore } from "../stores/game";
 
-// Coordonnées et zoom mémorisés entre les montages/démontages du composant
-let lat = 45.782
-let lng = 4.8656
-let currentZoom = 19
+// Coordonnées et zoom conservés entre montages
+let savedLat = 45.782;
+let savedLng = 4.8656;
+let savedZoom = 19;
 
-// Données des markers à recréer à chaque montage
-const markersData: Array<{ lat: number; lng: number; popup?: string }> = [
-  { lat: 45.78207, lng: 4.86559, popup: 'Entrée du bâtiment<br><strong>Nautibus</strong>.' },
-]
+// Icônes personnalisées
+const playerIcon = (role: string) =>
+  L.divIcon({
+    className: "custom-marker",
+    html: `<div style="
+      background: ${role === "explorateur" ? "#2196F3" : "#F44336"};
+      width: 14px; height: 14px; border-radius: 50%;
+      border: 2px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.5);
+    "></div>`,
+    iconSize: [14, 14],
+    iconAnchor: [7, 7],
+  });
+
+const localPlayerIcon = L.divIcon({
+  className: "custom-marker",
+  html: `<div style="
+    background: #4CAF50; width: 18px; height: 18px; border-radius: 50%;
+    border: 3px solid white; box-shadow: 0 0 6px rgba(0,0,0,0.6);
+  "></div>`,
+  iconSize: [18, 18],
+  iconAnchor: [9, 9],
+});
+
+const objectIcon = (discovered: boolean) =>
+  L.divIcon({
+    className: "custom-marker",
+    html: `<div style="
+      background: ${discovered ? "#FF9800" : "#9C27B0"};
+      width: 12px; height: 12px;
+      border: 2px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.5);
+      ${discovered ? "border-radius: 2px;" : "border-radius: 50%;"}
+    "></div>`,
+    iconSize: [12, 12],
+    iconAnchor: [6, 6],
+  });
 
 export default {
-  name: 'MyMap',
+  name: "MyMap",
   data() {
     return {
       map: null as LeafletMap | null,
-      markers: [] as Marker[],
-    }
+      playerMarkers: [] as Marker[],
+      objectMarkers: [] as Marker[],
+      localMarker: null as Marker | null,
+      zrrRectangle: null as Rectangle | null,
+      refreshInterval: null as ReturnType<typeof setInterval> | null,
+    };
+  },
+  computed: {
+    store() {
+      return useGameStore();
+    },
   },
   methods: {
     updateMap() {
-      if (!this.map) return false
-      this.map.setView([lat, lng], currentZoom)
-      return false
+      if (!this.map) return;
+      this.map.setView([savedLat, savedLng], savedZoom);
     },
-    createMarkers() {
-      if (!this.map) return
-      const map = this.map as LeafletMap
-      for (const data of markersData) {
-        const marker = L.marker([data.lat, data.lng]).addTo(map)
-        if (data.popup) marker.bindPopup(data.popup).openPopup()
-        this.markers.push(marker)
+
+    /** Dessiner la ZRR */
+    drawZRR() {
+      const map = this.map as LeafletMap;
+      if (this.zrrRectangle) {
+        this.zrrRectangle.remove();
+        this.zrrRectangle = null;
+      }
+      const zrr = this.store.zrr;
+      if (!zrr.defined || !zrr.limits) return;
+
+      const bounds: L.LatLngBoundsExpression = [
+        [zrr.limits.so[0], zrr.limits.so[1]],
+        [zrr.limits.ne[0], zrr.limits.ne[1]],
+      ];
+      this.zrrRectangle = L.rectangle(bounds, {
+        color: "#FF5722",
+        weight: 3,
+        fillOpacity: 0.05,
+        dashArray: "10, 5",
+      }).addTo(map);
+      this.zrrRectangle.bindPopup("Zone de Recherche et Récupération (ZRR)");
+    },
+
+    /** Afficher les joueurs distants */
+    drawPlayers() {
+      const map = this.map as LeafletMap;
+      // Supprimer les anciens
+      for (const m of this.playerMarkers) m.remove();
+      this.playerMarkers = [];
+
+      for (const player of this.store.players) {
+        const marker = L.marker([player.position[0], player.position[1]], {
+          icon: playerIcon(player.role),
+        }).addTo(map);
+        marker.bindPopup(
+          `<strong>${player.id}</strong><br>` +
+            `Rôle : ${player.role}<br>` +
+            `Score : ${player.score}`,
+        );
+        this.playerMarkers.push(marker);
       }
     },
-    removeMarkers() {
-      for (const marker of this.markers) {
-        marker.remove()
+
+    /** Afficher les objets (découverts et non découverts) */
+    drawObjects() {
+      const map = this.map as LeafletMap;
+      for (const m of this.objectMarkers) m.remove();
+      this.objectMarkers = [];
+
+      for (const obj of this.store.objects) {
+        const marker = L.marker([obj.position[0], obj.position[1]], {
+          icon: objectIcon(obj.discovered),
+        }).addTo(map);
+
+        const popupContent = obj.discovered
+          ? `<strong>${obj.id}</strong><br>Type : ${obj.type}<br><em>Découvert</em>`
+          : `<strong>${obj.id}</strong><br>Type : ???<br>TTL : ${Math.round(obj.ttl)}s`;
+
+        marker.bindPopup(popupContent);
+        this.objectMarkers.push(marker);
       }
-      this.markers = []
+    },
+
+    /** Afficher le joueur local séparément */
+    drawLocalPlayer() {
+      const map = this.map as LeafletMap;
+      const pos = this.store.localPlayer.position;
+
+      if (this.localMarker) {
+        this.localMarker.setLatLng([pos[0], pos[1]]);
+      } else {
+        this.localMarker = L.marker([pos[0], pos[1]], {
+          icon: localPlayerIcon,
+          zIndexOffset: 1000,
+        }).addTo(map);
+        this.localMarker.bindPopup(
+          `<strong>Vous (${this.store.localPlayer.id})</strong><br>` +
+            `Rôle : ${this.store.localPlayer.role}`,
+        );
+      }
+    },
+
+    /** Rafraîchir tous les éléments */
+    refreshAll() {
+      if (!this.map) return;
+      this.drawZRR();
+      this.drawPlayers();
+      this.drawObjects();
+      this.drawLocalPlayer();
     },
   },
+
   mounted() {
-    // Créer la map lors du montage (le DOM existe)
     const map = L.map(this.$refs.map as HTMLElement, {
-      center: [lat, lng],
-      zoom: currentZoom,
-    })
-    this.map = map
+      center: [savedLat, savedLng],
+      zoom: savedZoom,
+    });
+    this.map = map;
 
     // Tile layer
     L.tileLayer(
-      'https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}@2x.jpg90?access_token=pk.eyJ1IjoieGFkZXMxMDExNCIsImEiOiJjbGZoZTFvbTYwM29sM3ByMGo3Z3Mya3dhIn0.df9VnZ0zo7sdcqGNbfrAzQ',
+      "https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}@2x.jpg90?access_token=pk.eyJ1IjoieGFkZXMxMDExNCIsImEiOiJjbGZoZTFvbTYwM29sM3ByMGo3Z3Mya3dhIn0.df9VnZ0zo7sdcqGNbfrAzQ",
       {
         maxZoom: 22,
         minZoom: 1,
@@ -74,37 +197,54 @@ export default {
         tileSize: 512,
         zoomOffset: -1,
       },
-    ).addTo(map)
+    ).addTo(map);
 
-    // Recréer les markers
-    this.createMarkers()
+    // Clic sur la carte
+    map.on("click", (e: LeafletMouseEvent) => {
+      savedLat = e.latlng.lat;
+      savedLng = e.latlng.lng;
+    });
 
-    // Clic sur la carte : mémorise les coordonnées
-    map.on('click', (e: LeafletMouseEvent) => {
-      lat = e.latlng.lat
-      lng = e.latlng.lng
-      this.updateMap()
-    })
+    // Mémoriser le zoom
+    map.on("zoomend", () => {
+      savedZoom = map.getZoom();
+    });
 
-    // Mémoriser le zoom quand l'utilisateur le change
-    map.on('zoomend', () => {
-      currentZoom = map.getZoom()
-    })
+    // Premier affichage
+    this.refreshAll();
+
+    // Rafraîchir les markers toutes les 5 secondes (synchro avec envoi de position)
+    this.refreshInterval = setInterval(() => {
+      this.refreshAll();
+    }, 5000);
   },
+
   beforeUnmount() {
-    // Nettoyer les markers et détruire la map quand le routeur désactive le composant
-    this.removeMarkers()
+    // Nettoyer
+    if (this.refreshInterval) {
+      clearInterval(this.refreshInterval);
+      this.refreshInterval = null;
+    }
+    for (const m of this.playerMarkers) m.remove();
+    for (const m of this.objectMarkers) m.remove();
+    if (this.localMarker) this.localMarker.remove();
+    if (this.zrrRectangle) this.zrrRectangle.remove();
+    this.playerMarkers = [];
+    this.objectMarkers = [];
+    this.localMarker = null;
+    this.zrrRectangle = null;
+
     if (this.map) {
-      this.map.remove()
-      this.map = null
+      this.map.remove();
+      this.map = null;
     }
   },
-}
+};
 </script>
 
 <style scoped>
 .map {
-  height: 400px;
+  height: 500px;
   width: 100%;
   border: 1px solid;
 }
