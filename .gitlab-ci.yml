@@ -13,8 +13,6 @@ test-api:
     - npm install
     - npx eslint .
     - npm test
-  # only:
-  #   - main
 
 # --- PARTIE ADMIN (TP3) ---
 
@@ -26,7 +24,23 @@ build-admin:
     - npm run build # Génère le dossier admin/dist/
   artifacts:
     paths:
-      - admin/dist/ # Crucial : transmet le dossier dist au job de déploiement
+      - admin/dist/
+    expire_in: 1 hour
+  only:
+    - main
+
+# --- PARTIE CLIENT VUE (TP4) ---
+
+build-tp4:
+  stage: build_test
+  script:
+    - cd tp4           # Vérifie que ton dossier s'appelle bien 'tp4'
+    - npm install
+    - npm run lint     # Validation ESLint (Étape 4 de ton sujet)
+    - npm run build    # Génère le dossier tp4/dist/
+  artifacts:
+    paths:
+      - tp4/dist/
     expire_in: 1 hour
   only:
     - main
@@ -36,14 +50,28 @@ build-admin:
 deploy-all:
   stage: deploy
   before_script:
-    # Installation des outils pour le transfert SSH (rsync)
+    # Installation des outils SSH
     - apk add --no-cache rsync openssh-client
+    - eval $(ssh-agent -s)
+    # Utilise la variable SSH_PRIVATE_KEY configurée dans GitLab
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    # Ajout de l'IP à la liste des hôtes connus pour éviter le blocage
+    - ssh-keyscan 192.168.75.88 >> ~/.ssh/known_hosts
   script:
-    - echo "Déploiement de l'API et du Client Admin..."
-    # 1. Déploiement du client Admin vers Nginx
-    # - rsync -avz admin/dist/ $VM_USER@$VM_IP:/var/www/html/secret/
+    - echo "Déploiement de l'API, de l'Admin et du Client Vue..."
+
+    # 1. Déploiement du client Admin (TP3)
+    - rsync -avz admin/dist/ p2308972@192.168.75.88:/var/www/html/admin/
+
+    # 2. Déploiement du client Vue (TP4)
+    - rsync -avz tp4/dist/ p2308972@192.168.75.88:/var/www/html/tp4/
     
-    # 2. Déploiement de l'API (ton script actuel)
-    - echo "Relance de PM2 pour l'API..."
+    # 3. Déploiement et relance de l'API (Node.js)
+    # Remplace /home/p2308972/mon-api par ton vrai chemin sur la VM
+    - rsync -avz API/ p2308972@192.168.75.88:/home/p2308972/api-node/
+    - ssh p2308972@192.168.75.88 "cd /home/p2308972/api-node && npm install && pm2 restart all || pm2 start server.js"
+
   only:
     - main
