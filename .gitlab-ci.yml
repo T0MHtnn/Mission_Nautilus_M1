@@ -50,29 +50,23 @@ build-tp4:
 deploy-all:
   stage: deploy
   before_script:
-    # Installation des outils SSH
     - apk add --no-cache rsync openssh-client
     - eval $(ssh-agent -s)
-    # Utilise la variable SSH_PRIVATE_KEY configurée dans GitLab
-    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add - >/dev/null
+    # On s'assure que la clé finit par un saut de ligne pour éviter l'erreur libcrypto
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' > /tmp/id_rsa
+    - chmod 600 /tmp/id_rsa
+    - ssh-add /tmp/id_rsa
     - mkdir -p ~/.ssh
     - chmod 700 ~/.ssh
-    # Ajout de l'IP à la liste des hôtes connus pour éviter le blocage
     - ssh-keyscan 192.168.75.88 >> ~/.ssh/known_hosts
-    - chmod 644 ~/.ssh/known_hosts
   script:
-    - echo "Déploiement de l'API, de l'Admin et du Client Vue..."
-
-    # 1. Déploiement du client Admin (TP3)
-    - rsync -avz admin/dist/ p2308972@192.168.75.88:/var/www/html/admin/
-
-    # 2. Déploiement du client Vue (TP4)
-    - rsync -avz client/dist/ p2308972@192.168.75.88:/var/www/html/tp4/
+    - echo "Déploiement en cours..."
+    # On force rsync à utiliser la clé ajoutée sans vérification d'hôte stricte
+    - rsync -avz -e "ssh -o StrictHostKeyChecking=no" admin/dist/ p2308972@192.168.75.88:/var/www/html/admin/
+    - rsync -avz -e "ssh -o StrictHostKeyChecking=no" client/dist/ p2308972@192.168.75.88:/var/www/html/tp4/
     
-    # 3. Déploiement et relance de l'API (Node.js)
-    # Remplace /home/p2308972/mon-api par ton vrai chemin sur la VM
-    - rsync -avz API/ p2308972@192.168.75.88:/home/p2308972/api-node/
-    - ssh p2308972@192.168.75.88 "cd /home/p2308972/api-node && npm install && pm2 restart all || pm2 start server.js"
-
+    # Pour l'API Node, on s'assure d'utiliser le bon chemin
+    - rsync -avz -e "ssh -o StrictHostKeyChecking=no" API/ p2308972@192.168.75.88:/home/p2308972/api-node/
+    - ssh -o StrictHostKeyChecking=no p2308972@192.168.75.88 "cd /home/p2308972/api-node && npm install && pm2 restart all || pm2 start server.js"
   only:
     - main
