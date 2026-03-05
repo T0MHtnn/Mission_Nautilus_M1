@@ -8,22 +8,17 @@ import vueDevTools from "vite-plugin-vue-devtools";
 export default defineConfig({
   base: '/tp4/',
   plugins: [vue(), vueDevTools()],
-  resolve: {
-    alias: {
-      "@": fileURLToPath(new URL("./src", import.meta.url)),
-    },
-  },
   server: {
     proxy: {
       '/api': {
-        target: 'http://localhost:3000',
+        target: 'http://localhost:3000', // Ton serveur Node local
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
       },
       '/auth': {
-        target: 'https://192.168.75.88:8443',
+        target: 'https://192.168.75.88:8443', // Ta VM
         changeOrigin: true,
-        secure: false,
+        secure: false, // Important : accepte les certificats auto-signés de la VM
         rewrite: (path) => path.replace(/^\/auth/, ''),
       },
     },

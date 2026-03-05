@@ -9,7 +9,7 @@ import {
 } from "../mocks/gameData";
 
 const API_BASE = "/api";
-const AUTH_BASE = "/auth"; // Proxied via Vite vers le serveur Spring d'authentification
+const AUTH_BASE = "/auth";
 
 export const useGameStore = defineStore("game", () => {
   // --- État ---
@@ -56,10 +56,12 @@ export const useGameStore = defineStore("game", () => {
     password: string,
   ): Promise<{ success: boolean; error?: string }> {
     try {
+      // application/x-www-form-urlencoded = simple request CORS (pas de preflight OPTIONS)
       const res = await fetch(`${AUTH_BASE}/login`, {
         method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({ login: user, password }),
+        headers: { "Content-Type": "application/json" }, //  
+      body: JSON.stringify({ login: user, password }), // 
+    
       });
 
       if (!res.ok) {
@@ -84,6 +86,20 @@ export const useGameStore = defineStore("game", () => {
 
       if (!finalToken) {
         return { success: false, error: "Aucun token reçu du serveur" };
+      }
+
+      // Vérifier que l'utilisateur est un rival
+      const parts = finalToken.split('.');
+      if (parts.length >= 2) {
+        try {
+          const payload = JSON.parse(atob(parts[1]!));
+          const species = (payload.species || "").toLowerCase();
+          if (species !== "rival") {
+            return { success: false, error: "Seuls les rivaux peuvent se connecter" };
+          }
+        } catch {
+          // Si le décodage échoue, on continue quand même
+        }
       }
 
       token.value = finalToken;

@@ -40,13 +40,20 @@ npm run dev
 ```sh
 npm run build
 ```
+## Instructions pour test 
 
-
-dans la VM : 
- run-users.sh --app-origin=5173
 connect to VM
  ssh -i p2308972.pem p2308972@192.168.75.88
 
- userjar 
+et dans la VM
+java -jar users-https.jar --app-origin=https://192.168.75.88
 
+ensuite creer un user en utilisant swagger:
+https://192.168.75.88:8443/swagger-ui
+
+et connecte toi sur : https://192.168.75.88/tp4/
+************************************************************************
+ 
+************************
+pas besoin mais recommandé pour test localhost sur powershell
  java -jar users.jar --app.origin=http://localhost:5173
