@@ -5,7 +5,6 @@ stages:
   - deploy
 
 # --- PARTIE API ---
-
 test-api:
   stage: build_test
   script:
@@ -15,13 +14,12 @@ test-api:
     - npm test
 
 # --- PARTIE ADMIN (TP3) ---
-
 build-admin:
   stage: build_test
   script:
     - cd admin
     - npm install
-    - npm run build # Génère le dossier admin/dist/
+    - npm run build
   artifacts:
     paths:
       - admin/dist/
@@ -30,14 +28,13 @@ build-admin:
     - main
 
 # --- PARTIE CLIENT VUE (TP4) ---
-
 build-tp4:
   stage: build_test
   script:
     - cd client
     - npm install
-    - npm run lint     # Validation ESLint (Étape 4 de ton sujet)
-    - npm run build    # Génère le dossier client/dist/
+    - npm run lint
+    - npm run build
   artifacts:
     paths:
       - client/dist/
@@ -46,13 +43,11 @@ build-tp4:
     - main
 
 # --- DÉPLOIEMENT GLOBAL ---
-
 deploy-all:
   stage: deploy
   before_script:
     - apk add --no-cache rsync openssh-client
     - eval $(ssh-agent -s)
-    # On s'assure que la clé finit par un saut de ligne pour éviter l'erreur libcrypto
     - echo "$SSH_PRIVATE_KEY" | tr -d '\r' > /tmp/id_rsa
     - chmod 600 /tmp/id_rsa
     - ssh-add /tmp/id_rsa
@@ -60,13 +55,19 @@ deploy-all:
     - chmod 700 ~/.ssh
     - ssh-keyscan 192.168.75.88 >> ~/.ssh/known_hosts
   script:
-    - echo "Déploiement en cours..."
-    # On ajoute -o PubkeyAcceptedAlgorithms=+ssh-rsa
-    - rsync -avz -e "ssh -o StrictHostKeyChecking=no -o PubkeyAcceptedAlgorithms=+ssh-rsa" admin/dist/ p2308972@192.168.75.88:/var/www/html/admin/
-    - rsync -avz -e "ssh -o StrictHostKeyChecking=no -o PubkeyAcceptedAlgorithms=+ssh-rsa" client/dist/ p2308972@192.168.75.88:/var/www/html/tp4/
+    - echo "Déploiement avec forçage des algorithmes RSA..."
+    # Définition des options de compatibilité pour les vieux serveurs SSH
+    - export SSH_OPTS="-o StrictHostKeyChecking=no -o PubkeyAcceptedAlgorithms=+ssh-rsa -o HostKeyAlgorithms=+ssh-rsa"
+
+    # 1. Déploiement Admin (TP3) -> /var/www/html/admin/
+    - rsync -avz -e "ssh $SSH_OPTS" admin/dist/ p2308972@192.168.75.88:/var/www/html/admin/
+
+    # 2. Déploiement Client Vue (TP4) -> /var/www/html/tp4/
+    - rsync -avz -e "ssh $SSH_OPTS" client/dist/ p2308972@192.168.75.88:/var/www/html/tp4/
     
-    # Pour l'API Node, on s'assure d'utiliser le bon chemin
-    - rsync -avz -e "ssh -o StrictHostKeyChecking=no" API/ p2308972@192.168.75.88:/home/p2308972/api-node/
-    - ssh -o StrictHostKeyChecking=no p2308972@192.168.75.88 "cd /home/p2308972/api-node && npm install && pm2 restart all || pm2 start server.js"
+    # 3. Déploiement API Node -> /home/p2308972/api-node/
+    - rsync -avz -e "ssh $SSH_OPTS" API/ p2308972@192.168.75.88:/home/p2308972/api-node/
+    - ssh $SSH_OPTS p2308972@192.168.75.88 "cd /home/p2308972/api-node && npm install && pm2 restart all || pm2 start server.js"
+
   only:
     - main
