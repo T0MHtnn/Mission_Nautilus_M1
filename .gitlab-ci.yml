@@ -34,13 +34,13 @@ build-admin:
 build-tp4:
   stage: build_test
   script:
-    - cd tp4           # Vérifie que ton dossier s'appelle bien 'tp4'
+    - cd client
     - npm install
     - npm run lint     # Validation ESLint (Étape 4 de ton sujet)
-    - npm run build    # Génère le dossier tp4/dist/
+    - npm run build    # Génère le dossier client/dist/
   artifacts:
     paths:
-      - tp4/dist/
+      - client/dist/
     expire_in: 1 hour
   only:
     - main
@@ -66,7 +66,7 @@ deploy-all:
     - rsync -avz admin/dist/ p2308972@192.168.75.88:/var/www/html/admin/
 
     # 2. Déploiement du client Vue (TP4)
-    - rsync -avz tp4/dist/ p2308972@192.168.75.88:/var/www/html/tp4/
+    - rsync -avz client/dist/ p2308972@192.168.75.88:/var/www/html/tp4/
     
     # 3. Déploiement et relance de l'API (Node.js)
     # Remplace /home/p2308972/mon-api par ton vrai chemin sur la VM
