@@ -61,9 +61,9 @@ deploy-all:
     - ssh-keyscan 192.168.75.88 >> ~/.ssh/known_hosts
   script:
     - echo "Déploiement en cours..."
-    # On force rsync à utiliser la clé ajoutée sans vérification d'hôte stricte
-    - rsync -avz -e "ssh -o StrictHostKeyChecking=no" admin/dist/ p2308972@192.168.75.88:/var/www/html/admin/
-    - rsync -avz -e "ssh -o StrictHostKeyChecking=no" client/dist/ p2308972@192.168.75.88:/var/www/html/tp4/
+    # On ajoute -o PubkeyAcceptedAlgorithms=+ssh-rsa
+    - rsync -avz -e "ssh -o StrictHostKeyChecking=no -o PubkeyAcceptedAlgorithms=+ssh-rsa" admin/dist/ p2308972@192.168.75.88:/var/www/html/admin/
+    - rsync -avz -e "ssh -o StrictHostKeyChecking=no -o PubkeyAcceptedAlgorithms=+ssh-rsa" client/dist/ p2308972@192.168.75.88:/var/www/html/tp4/
     
     # Pour l'API Node, on s'assure d'utiliser le bon chemin
     - rsync -avz -e "ssh -o StrictHostKeyChecking=no" API/ p2308972@192.168.75.88:/home/p2308972/api-node/
