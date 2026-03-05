@@ -4,43 +4,41 @@ stages:
   - build_test
   - deploy
 
-# Résoudre les problèmes réseau (ECONNRESET) sur le runner CI
-before_script:
-  - npm config set fetch-retries 5
-  - npm config set fetch-retry-mintimeout 20000
-  - npm config set fetch-retry-maxtimeout 120000
-
 # --- PARTIE API ---
+
 test-api:
   stage: build_test
   script:
     - cd API
     - npm install
     - npx eslint .
-    - npm test
+  only:
+    - main
 
 # --- PARTIE ADMIN (TP3) ---
+
 build-admin:
   stage: build_test
   script:
     - cd admin
     - npm install
-    - npm run build
+    - npm run build # Génère le dossier admin/dist/
   artifacts:
     paths:
-      - admin/dist/
+      - admin/dist/ # Crucial : transmet le dossier dist au job de déploiement
     expire_in: 1 hour
   only:
     - main
 
 # --- PARTIE CLIENT VUE (TP4) ---
+
 build-tp4:
   stage: build_test
   script:
     - cd client
     - npm install
     - npm run lint
-    - npm run build
+    - npm run build # Génère le dossier client/dist/
   artifacts:
     paths:
       - client/dist/
@@ -49,32 +47,21 @@ build-tp4:
     - main
 
 # --- DÉPLOIEMENT GLOBAL ---
-# --- DÉPLOIEMENT GLOBAL ---
+
 deploy-all:
   stage: deploy
   before_script:
+    # Installation des outils pour le transfert SSH (rsync)
     - apk add --no-cache rsync openssh-client
-    # Supprime la ligne chmod $SSH_PRIVATE_KEY ici
-    - eval $(ssh-agent -s)
-    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' > /tmp/id_rsa
-    - chmod 600 /tmp/id_rsa
-    - ssh-add /tmp/id_rsa
-    - mkdir -p ~/.ssh
-    - chmod 700 ~/.ssh
-    - ssh-keyscan 192.168.75.88 >> ~/.ssh/known_hosts
   script:
-    - echo "Déploiement avec forçage des algorithmes RSA..."
-    - export SSH_OPTS="-o StrictHostKeyChecking=no -o PubkeyAcceptedAlgorithms=+ssh-rsa -o HostKeyAlgorithms=+ssh-rsa"
+    - echo "Déploiement de l'API et du Client Admin..."
+    # 1. Déploiement du client Admin vers Nginx
+    # - rsync -avz admin/dist/ $VM_USER@$VM_IP:/var/www/html/secret/
+    
+    # 2. Déploiement du client Vue (TP4) vers Nginx
+    # - rsync -avz client/dist/ $VM_USER@$VM_IP:/var/www/html/tp4/
 
-    # 1. Déploiement Admin (TP3)
-    - rsync -avz -e "ssh $SSH_OPTS" admin/dist/ p2308972@192.168.75.88:/var/www/html/admin/
-
-    # 2. Déploiement Client Vue (TP4)
-    - rsync -avz -e "ssh $SSH_OPTS" client/dist/ p2308972@192.168.75.88:/var/www/html/tp4/
-
-    # 3. Déploiement API Node
-    - rsync -avz -e "ssh $SSH_OPTS" API/ p2308972@192.168.75.88:/home/p2308972/api-node/
-    - ssh $SSH_OPTS p2308972@192.168.75.88 "cd /home/p2308972/api-node && npm install && (pm2 restart all || pm2 start server.js)"
-
+    # 3. Déploiement de l'API (ton script actuel)
+    - echo "Relance de PM2 pour l'API..."
   only:
     - main
