@@ -49,11 +49,12 @@ build-tp4:
     - main
 
 # --- DÉPLOIEMENT GLOBAL ---
+# --- DÉPLOIEMENT GLOBAL ---
 deploy-all:
   stage: deploy
   before_script:
     - apk add --no-cache rsync openssh-client
-    - chmod 400 $SSH_PRIVATE_KEY
+    # Supprime la ligne chmod $SSH_PRIVATE_KEY ici
     - eval $(ssh-agent -s)
     - echo "$SSH_PRIVATE_KEY" | tr -d '\r' > /tmp/id_rsa
     - chmod 600 /tmp/id_rsa
@@ -63,20 +64,17 @@ deploy-all:
     - ssh-keyscan 192.168.75.88 >> ~/.ssh/known_hosts
   script:
     - echo "Déploiement avec forçage des algorithmes RSA..."
-    # Définition des options de compatibilité pour les vieux serveurs SSH
     - export SSH_OPTS="-o StrictHostKeyChecking=no -o PubkeyAcceptedAlgorithms=+ssh-rsa -o HostKeyAlgorithms=+ssh-rsa"
 
-    # 1. Déploiement Admin (TP3) -> /var/www/html/admin/
+    # 1. Déploiement Admin (TP3)
     - rsync -avz -e "ssh $SSH_OPTS" admin/dist/ p2308972@192.168.75.88:/var/www/html/admin/
-    - ssh $SSH_OPTS p2308972@192.168.75.88 "chmod -R 755 /var/www/html/admin/"
 
-    # 2. Déploiement Client Vue (TP4) -> /var/www/html/tp4/
+    # 2. Déploiement Client Vue (TP4)
     - rsync -avz -e "ssh $SSH_OPTS" client/dist/ p2308972@192.168.75.88:/var/www/html/tp4/
-    - ssh $SSH_OPTS p2308972@192.168.75.88 "chmod -R 755 /var/www/html/tp4/"
 
-    # 3. Déploiement API Node -> /home/p2308972/api-node/
+    # 3. Déploiement API Node
     - rsync -avz -e "ssh $SSH_OPTS" API/ p2308972@192.168.75.88:/home/p2308972/api-node/
-    - ssh $SSH_OPTS p2308972@192.168.75.88 "chmod -R 755 /home/p2308972/api-node/ && cd /home/p2308972/api-node && npm install && pm2 restart all || pm2 start server.js"
+    - ssh $SSH_OPTS p2308972@192.168.75.88 "cd /home/p2308972/api-node && npm install && (pm2 restart all || pm2 start server.js)"
 
   only:
     - main
