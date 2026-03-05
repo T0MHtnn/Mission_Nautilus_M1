@@ -59,9 +59,8 @@ export const useGameStore = defineStore("game", () => {
       // application/x-www-form-urlencoded = simple request CORS (pas de preflight OPTIONS)
       const res = await fetch(`${AUTH_BASE}/login`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" }, //  
-      body: JSON.stringify({ login: user, password }), // 
-    
+        headers: { "Content-Type": "application/json" }, //
+        body: JSON.stringify({ login: user, password }), //
       });
 
       if (!res.ok) {
@@ -89,13 +88,16 @@ export const useGameStore = defineStore("game", () => {
       }
 
       // Vérifier que l'utilisateur est un rival
-      const parts = finalToken.split('.');
+      const parts = finalToken.split(".");
       if (parts.length >= 2) {
         try {
           const payload = JSON.parse(atob(parts[1]!));
           const species = (payload.species || "").toLowerCase();
           if (species !== "rival") {
-            return { success: false, error: "Seuls les rivaux peuvent se connecter" };
+            return {
+              success: false,
+              error: "Seuls les rivaux peuvent se connecter",
+            };
           }
         } catch {
           // Si le décodage échoue, on continue quand même
@@ -263,8 +265,7 @@ export const useGameStore = defineStore("game", () => {
       });
       if (res.ok) {
         const data = await res.json();
-        localPlayer.value.score =
-          data.newScore ?? localPlayer.value.score + 1;
+        localPlayer.value.score = data.newScore ?? localPlayer.value.score + 1;
         console.log(`Score mis à jour: ${localPlayer.value.score}`);
       }
     } catch (e) {

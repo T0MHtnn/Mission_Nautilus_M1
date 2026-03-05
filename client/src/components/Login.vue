@@ -13,7 +13,7 @@
   </div>
 </template>
 
-<script>
+<script lang="ts">
 import { useGameStore } from "../stores/game";
 
 export default {
