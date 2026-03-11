@@ -71,7 +71,7 @@ export default {
       objectMarkers: [] as Marker[],
       localMarker: null as Marker | null,
       zrrRectangle: null as Rectangle | null,
-      refreshInterval: null as ReturnType<typeof setInterval> | null,
+      unwatchStore: null as (() => void) | null,
     };
   },
   computed: {
@@ -213,17 +213,17 @@ export default {
     // Premier affichage
     this.refreshAll();
 
-    // Rafraîchir les markers toutes les 5 secondes (synchro avec envoi de position)
-    this.refreshInterval = setInterval(() => {
+    // Réagir aux changements du store (le polling est géré par le store)
+    this.unwatchStore = this.store.$subscribe(() => {
       this.refreshAll();
-    }, 5000);
+    });
   },
 
   beforeUnmount() {
-    // Nettoyer
-    if (this.refreshInterval) {
-      clearInterval(this.refreshInterval);
-      this.refreshInterval = null;
+    // Nettoyer le watcher
+    if (this.unwatchStore) {
+      this.unwatchStore();
+      this.unwatchStore = null;
     }
     for (const m of this.playerMarkers) m.remove();
     for (const m of this.objectMarkers) m.remove();
