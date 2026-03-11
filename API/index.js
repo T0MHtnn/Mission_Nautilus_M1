@@ -6,10 +6,10 @@ import gameRouter from './routes/game.js';
 import adminRouter from './routes/admin.js';
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3376;
 
 app.use(cors({
-	origin: 'http://localhost:3306'
+	origin: ['http://localhost:3306', 'http://localhost:5173']
 }));
 
 app.use(express.json());
