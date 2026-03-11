@@ -16,6 +16,7 @@ export const useGameStore = defineStore("game", () => {
   const token = ref<string | null>(localStorage.getItem("zanzibar_token"));
   const logged = ref(!!token.value);
   const login = ref("");
+  const isFetching = ref(false);
 
   // Joueurs distants
   const players = ref<PlayerData[]>([...mockPlayers]);
@@ -32,8 +33,8 @@ export const useGameStore = defineStore("game", () => {
     position: [...mockLocalPlayer.position] as [number, number],
   });
 
-  // Intervalle d'envoi de position
-  let positionInterval: ReturnType<typeof setInterval> | null = null;
+  // Intervalles
+  let pollingInterval: ReturnType<typeof setInterval> | null = null;
 
   // --- Getters ---
   const undiscoveredObjects = computed(() =>
@@ -108,7 +109,7 @@ export const useGameStore = defineStore("game", () => {
       localStorage.setItem("zanzibar_token", finalToken);
       login.value = user;
       logged.value = true;
-      startPositionUpdates();
+      startPolling();
       return { success: true };
     } catch {
       return {
@@ -124,7 +125,7 @@ export const useGameStore = defineStore("game", () => {
     token.value = null;
     login.value = "";
     localStorage.removeItem("zanzibar_token");
-    stopPositionUpdates();
+    stopPolling();
   }
 
   /** Simuler le déplacement du joueur local (petit mouvement aléatoire) */
@@ -136,20 +137,75 @@ export const useGameStore = defineStore("game", () => {
     ];
   }
 
-  /** Envoyer la position du joueur au serveur Express toutes les 5 secondes */
-  function startPositionUpdates() {
-    if (positionInterval) return;
-    positionInterval = setInterval(async () => {
+  /** Démarrer le polling toutes les 5s (positions + ressources + envoi position) */
+  function startPolling() {
+    if (pollingInterval) return;
+    // Fetch initial immédiat
+    updateGameState();
+    pollingInterval = setInterval(async () => {
       simulateLocalMovement();
-      await sendPosition();
+      await Promise.all([sendPosition(), updateGameState()]);
       checkProximity();
     }, 5000);
   }
 
-  function stopPositionUpdates() {
-    if (positionInterval) {
-      clearInterval(positionInterval);
-      positionInterval = null;
+  function stopPolling() {
+    if (pollingInterval) {
+      clearInterval(pollingInterval);
+      pollingInterval = null;
+    }
+  }
+
+  /** Action principale : récupère l'état du jeu depuis le serveur */
+  async function updateGameState() {
+    if (!token.value) return;
+    isFetching.value = true;
+    try {
+      const [posRes, resRes, zrrRes] = await Promise.all([
+        fetch(`${API_BASE}/game/positions`, { headers: authHeaders.value }),
+        fetch(`${API_BASE}/game/resources`, { headers: authHeaders.value }),
+        fetch(`${API_BASE}/game/zrr`, { headers: authHeaders.value }),
+      ]);
+
+      if (posRes.ok) {
+        const posData = await posRes.json();
+        if (posData.players) {
+          players.value = posData.players;
+        }
+      }
+
+      if (resRes.ok) {
+        const resData = await resRes.json();
+        if (resData.objects) {
+          objects.value = resData.objects.map(
+            (o: Omit<GameObject, "discovered">) => ({
+              ...o,
+              discovered: false,
+            }),
+          );
+        }
+        if (resData.processedObjects) {
+          const processed = resData.processedObjects.map(
+            (o: Omit<GameObject, "discovered" | "ttl">) => ({
+              ...o,
+              discovered: true,
+              ttl: 0,
+            }),
+          );
+          objects.value = [...objects.value, ...processed];
+        }
+      }
+
+      if (zrrRes.ok) {
+        const zrrData = await zrrRes.json();
+        if (zrrData.defined) {
+          zrr.value = zrrData;
+        }
+      }
+    } catch (e) {
+      console.warn("Erreur updateGameState (utilisation des mocks):", e);
+    } finally {
+      isFetching.value = false;
     }
   }
 
@@ -166,60 +222,6 @@ export const useGameStore = defineStore("game", () => {
       });
     } catch (e) {
       console.warn("Erreur envoi position:", e);
-    }
-  }
-
-  /** Récupérer les ressources depuis le serveur */
-  async function fetchResources() {
-    if (!token.value) return;
-    try {
-      const res = await fetch(`${API_BASE}/game/resources`, {
-        headers: authHeaders.value,
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.players) {
-          players.value = data.players;
-        }
-        if (data.objects) {
-          objects.value = data.objects.map(
-            (o: Omit<GameObject, "discovered">) => ({
-              ...o,
-              discovered: false,
-            }),
-          );
-        }
-        if (data.processedObjects) {
-          const processed = data.processedObjects.map(
-            (o: Omit<GameObject, "discovered" | "ttl">) => ({
-              ...o,
-              discovered: true,
-              ttl: 0,
-            }),
-          );
-          objects.value = [...objects.value, ...processed];
-        }
-      }
-    } catch (e) {
-      console.warn("Erreur fetch resources (utilisation des mocks):", e);
-    }
-  }
-
-  /** Récupérer la ZRR depuis le serveur */
-  async function fetchZRR() {
-    if (!token.value) return;
-    try {
-      const res = await fetch(`${API_BASE}/game/zrr`, {
-        headers: authHeaders.value,
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.defined) {
-          zrr.value = data;
-        }
-      }
-    } catch (e) {
-      console.warn("Erreur fetch ZRR (utilisation du mock):", e);
     }
   }
 
@@ -295,6 +297,7 @@ export const useGameStore = defineStore("game", () => {
     token,
     logged,
     login,
+    isFetching,
     players,
     objects,
     zrr,
@@ -306,12 +309,10 @@ export const useGameStore = defineStore("game", () => {
     // Actions
     doLogin,
     logout,
-    simulateLocalMovement,
-    startPositionUpdates,
-    stopPositionUpdates,
+    updateGameState,
+    startPolling,
+    stopPolling,
     sendPosition,
-    fetchResources,
-    fetchZRR,
     distanceMeters,
     checkProximity,
     processObject,
