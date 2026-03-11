@@ -59,8 +59,8 @@ export const useGameStore = defineStore("game", () => {
       // application/x-www-form-urlencoded = simple request CORS (pas de preflight OPTIONS)
       const res = await fetch(`${AUTH_BASE}/login`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" }, //
-        body: JSON.stringify({ login: user, password }), //
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ login: user, password }),
       });
 
       if (!res.ok) {
