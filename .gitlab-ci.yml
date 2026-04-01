@@ -67,7 +67,7 @@ deploy-all:
     
     # 2. Déploiement du client Vue (TP4)
     - echo "Déploiement du client Vue..."
-    - rsync -avz --delete client/dist/ gitlabci@192.168.75.88:/var/www/html/tp4/
+    - rsync -avz --delete client/dist/ gitlabci@192.168.75.88:/var/www/html/
 
     # 3. Déploiement de l'API Node.js
     - echo "Déploiement de l'API Express..."
