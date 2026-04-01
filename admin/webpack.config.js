@@ -9,8 +9,12 @@ const isProduction = process.env.NODE_ENV === 'production';
 const stylesHandler = isProduction ? MiniCssExtractPlugin.loader : 'style-loader';
 
 const config = {
-    entry: './src/index.ts',
+    entry: {
+        main: './src/index.ts',
+        login: './src/login.ts'
+    },
     output: {
+        filename: '[name].bundle.js',
         path: path.resolve(__dirname, 'dist'),
         // Important pour que les assets soient cherchés au bon endroit sur la VM
         publicPath: isProduction ? '/admin/' : '/',
@@ -23,11 +27,18 @@ const config = {
     plugins: [
         new HtmlWebpackPlugin({
             template: 'index.html',
+            filename: 'index.html',
+            chunks: ['main']
+        }),
+        new HtmlWebpackPlugin({
+            template: './login.html',
+            filename: 'login.html',
+            chunks: ['login'] // N'inclut que le JS du login
         }),
         new webpack.DefinePlugin({
             __API_PATH__: isProduction
                 ? JSON.stringify('https://192.168.75.88/api')
-                : JSON.stringify('http://localhost:3000')
+                : JSON.stringify('http://localhost:3376')
         }),
     ],
     module: {

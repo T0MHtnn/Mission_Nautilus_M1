@@ -28,8 +28,6 @@ router.post('/position', validateToken, (req, res) => {
 				score: 0,
 				objectsProcessed: 0
 			};
-		} else {
-			gameState.players[login].role = req.user.role.toLowerCase();
 		}
 
 		gameState.players[login].position = position;
@@ -79,26 +77,22 @@ router.post('/position', validateToken, (req, res) => {
 router.get('/resources', validateToken, (req, res) => {
 	try {
 		const login = req.user.login;
+		const role = req.user.role;
+		let user = gameState.players[login];
 
-		if (!login || !gameState.players[login]) {
-			return res.status(404).json({ error: "Joueur non trouvé" });
+		if (!user) {
+			if (role === 'admin' || role === 'administrator') {
+				user = { role: 'admin', position: [45.782, 4.8656] };
+			} else {
+				return res.status(404).json({ error: "Joueur non trouvé" });
+			}
 		}
-
-		const user = gameState.players[login];
 
 		// Filtrer les joueurs visibles
 		const visiblePlayers = Object.entries(gameState.players)
 			.filter(([name, p]) => {
-				// Ne pas renvoyer l'utilisateur lui-même
-				if (name === login) return false;
+				if (p.role === 'admin' || p.role === 'administrator') return false;
 
-				// Les rivaux ne sont pas affichés (sauf pour les autres rivaux et l'admin)
-				if (p.role === 'rival' && user.role === 'explorateur') return false;
-
-				// Les administrateurs ne sont jamais affichés
-				if (p.role === 'admin') return false;
-
-				// Doit avoir une position
 				return p.position !== undefined;
 			})
 			.map(([name, p]) => ({
@@ -116,8 +110,9 @@ router.get('/resources', validateToken, (req, res) => {
 			.filter(obj => {
 				const elapsed = (currentTime - obj.createdAt) / 1000;
 				const remainingTtl = obj.ttl - elapsed;
-				const distance = calculateDistance(user.position, obj.position);
-				return remainingTtl > 0 && distance < 500;
+				// const distance = calculateDistance(user.position, obj.position);
+				// return remainingTtl > 0 && distance < 500;
+				return remainingTtl > 0;			// POUR LE MOMENT ON CHECK JUSTE SI L'OBJET S'AFFICHE
 			})
 			.map(obj => {
 				const elapsed = (currentTime - obj.createdAt) / 1000;
@@ -182,6 +177,9 @@ router.post('/process-object', validateToken, (req, res) => {
 	try {
 		const { objectId } = req.body;
 		const login = req.user.login;
+		const user = gameState.players[login];
+
+		console.log(`🎯 [PROCESS] Tentative par ${login} sur l'objet ${objectId}`);
 
 		if (!objectId) {
 			return res.status(400).json({ error: "Format invalide. Requis: objectId" });
@@ -198,7 +196,6 @@ router.post('/process-object', validateToken, (req, res) => {
 			gameState.players[login].role = req.user.role.toLowerCase();
 		}
 
-		const user = gameState.players[login];
 
 		// Vérifier si le joueur a une position pour calculer la distance
 		if (!user.position) {
@@ -214,6 +211,8 @@ router.post('/process-object', validateToken, (req, res) => {
 
 		const obj = gameState.objects[objIndex];
 		const distance = calculateDistance(user.position, obj.position);
+
+		console.log(`📏 [PROCESS] Distance calculée: ${distance.toFixed(2)}m`);
 
 		// Vérifier la distance
 		if (distance > maxDistance) {
@@ -329,7 +328,10 @@ router.get('/zrr', validateToken, (req, res) => {
 
 		res.json({
 			defined: true,
-			limits: zrr.limits
+			limits: {
+				so: [zrr.limits.se[0], zrr.limits.no[1]],
+				ne: [zrr.limits.no[0], zrr.limits.se[1]]
+			}
 		});
 	} catch (error) {
 		eventLogger.error(`Erreur récupération ZRR: ${error.message}`);

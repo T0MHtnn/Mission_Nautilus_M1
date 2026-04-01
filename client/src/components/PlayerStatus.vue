@@ -1,22 +1,18 @@
 <script setup lang="ts">
-import { ref } from "vue";
-
-// Une variable "réactive" : si elle change, le HTML se met à jour tout seul
-const score = ref(0);
-const role = ref("Rival");
-
-function incrementScore() {
-  score.value++;
-}
+import { useGameStore } from "../stores/game";
+const store = useGameStore();
 </script>
 
 <template>
   <div class="status-card">
-    <h2>Rôle : {{ role }}</h2>
+    <h2>Rôle : {{ store.localPlayer.role }}</h2>
     <p>
-      Objets traités : <strong>{{ score }}</strong>
+      Objets traités : <strong>{{ store.localPlayer.score }}</strong>
     </p>
-    <button @click="incrementScore">Simuler une capture</button>
+    <p>
+      Position : 
+      <small>{{ store.localPlayer.position[0].toFixed(4) }}, {{ store.localPlayer.position[1].toFixed(4) }}</small>
+    </p>
   </div>
 </template>
 

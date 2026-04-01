@@ -39,7 +39,7 @@
     </section>
 
     <section>
-        <h2>ZRR</h2>
+        <h2>Zone à Régime Restreint (ZRR)</h2>
         <div class="content">
             <form id="setCorner1" onsubmit="return false;" class="pure-form">
                 <fieldset>
@@ -53,24 +53,56 @@
                     <label for="lon2">Longitude</label> <input type="text" id="lon2" name="lon2">
                 </fieldset>
                 <fieldset>
-                    <label for="sendZrr" class="first">Définir les limites de la ZRR ></label>&nbsp;&nbsp;
+                    <label for="sendZrr" class="first">Visualiser ZRR</label>&nbsp;&nbsp;
                     <button class="pure-button pure-button-active" id="setZrrButton">Set</button>&nbsp;&nbsp;
-                    <label for="sendZrr">Envoyer les coordonnées de la ZRR ></label>&nbsp;&nbsp;
+                    <label for="sendZrr">Envoyer les coordonnées de la ZRR au serveur</label>&nbsp;&nbsp;
                     <button class="pure-button pure-button-active" id="sendZrrButton">Send</button>
                 </fieldset>
             </form>
         </div>
     </section>
+    <section>
+        <h2>Gestion des Équipages</h2>
+        <div class="content">
+            <label class="first">Agent :</label>
+            <select id="playerLogin">
+                <option value="">-- Sélectionner un agent --</option>
+            </select>
+            <label>Affectation :</label>
+            <select id="playerRole">
+                <option value="explorateur">Explorateur</option>
+                <option value="rival">Rival</option>
+            </select>
+            <button id="setRoleButton">Assigner le Rôle</button>
+        </div>
+    </section>
 
     <section>
-        <h2>Paramètres</h2>
+        <h2>Ressources & État du Monde</h2>
+        <div class="content">
+            <label class="first" for="objectType">Type :</label>
+            <select id="objectType">
+                <option value="artefact">💎 Artefact</option>
+                <option value="creature">👹 Créature</option>
+                <option value="tresor">💰 Trésor</option>
+                <option value="inconnu">❓ Inconnu / Autre</option>
+            </select>
+            <button id="spawnObjectButton">Déployer sur coordonnées</button>
+            <hr style="border: 0; border-top: 1px solid #535C4A; margin: 15px 0;">
+            <div id="gameStatusDisplay" style="margin-bottom: 10px;">
+                <strong>Statut :</strong> Non chargé
+            </div>
+            <button id="refreshStatusButton">Actualiser les données</button>
+        </div>
+    </section>
+
+    <section>
+        <h2>Paramètres de Traque</h2>
         <div class="content">
             <form id="setTtl" onsubmit="return false;" class="pure-form">
-                <fieldset>
-                    <label for="ttl" class="first">Temps de Traque et de Localisation (TTL) par défaut</label> <input
-                        type="number" min="0" max="180" value="60" id="ttl" name="ttl">&nbsp;&nbsp;
-                    <button id="setTtlButton" class="pure-button pure-button-active">Set</button>
-                </fieldset>
+                <label for="ttl" class="first">TTL par défaut (sec)</label>
+                <input type="number" min="0" max="180" value="60" id="ttl" name="ttl">
+                <button id="setTtlButton" class="pure-button">Mettre à jour</button>
             </form>
         </div>
     </section>

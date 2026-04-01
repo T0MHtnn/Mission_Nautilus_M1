@@ -31,7 +31,6 @@ export default {
     <span v-if="logged" class="user-info">
       {{ store.login }} | Score: {{ store.localPlayer.score }}
     </span>
-    <button @click="store.logged = !store.logged">Toggle login</button>
   </header>
 
   <main>

@@ -1,12 +1,21 @@
 <template>
-  <section>
-    <h2>Carte</h2>
+  <section class="map-container">
     <p class="content">
-      Joueurs : <strong>{{ store.players.length }}</strong> | Objets non
-      découverts : <strong>{{ store.undiscoveredObjects.length }}</strong> |
+      Joueurs : <strong>{{ store.players.length }}</strong> | 
+      Objets non découverts : <strong>{{ store.undiscoveredObjects.length }}</strong> | 
       Objets découverts : <strong>{{ store.discoveredObjects.length }}</strong>
     </p>
+
     <div id="map" class="map" ref="map"></div>
+
+    <div v-if="store.gameMessage" class="game-overlay" :class="store.gameMessage.type">
+      <div class="modal">
+        <h1>{{ store.gameMessage.title }}</h1>
+        <p>{{ store.gameMessage.body }}</p>
+        <button v-if="!store.isGameOver" @click="store.gameMessage = null">Continuer</button>
+        <button v-else @click="store.logout()">Quitter le jeu</button>
+      </div>
+    </div>
   </section>
 </template>
 
@@ -93,7 +102,17 @@ export default {
         this.zrrRectangle = null;
       }
       const zrr = this.store.zrr;
-      if (!zrr.defined || !zrr.limits) return;
+
+      console.log("🗺️ [MAP] Tentative de dessin ZRR. État dans le store:", {
+          defined: zrr.defined,
+          hasLimits: !!zrr.limits
+      });
+
+      if (!zrr.defined || !zrr.limits) {
+          console.log("ZRR non définie ou sans limites");
+          return;
+      }
+      console.log("📍 [MAP] Points de dessin (SO/NE):", zrr.limits.so, zrr.limits.ne);
 
       const bounds: L.LatLngBoundsExpression = [
         [zrr.limits.so[0], zrr.limits.so[1]],
@@ -115,7 +134,13 @@ export default {
       for (const m of this.playerMarkers) m.remove();
       this.playerMarkers = [];
 
-      for (const player of this.store.players) {
+      const myId = this.store.localPlayer.id.toLowerCase();
+
+      const remotePlayers = this.store.players.filter(p => 
+        p.id.toLowerCase() !== myId
+      );
+
+      for (const player of remotePlayers) {
         const marker = L.marker([player.position[0], player.position[1]], {
           icon: playerIcon(player.role),
         }).addTo(map);
@@ -201,8 +226,9 @@ export default {
 
     // Clic sur la carte
     map.on("click", (e: LeafletMouseEvent) => {
-      savedLat = e.latlng.lat;
-      savedLng = e.latlng.lng;
+      if (this.store.isGameOver) return;
+      this.store.localPlayer.position = [e.latlng.lat, e.latlng.lng];
+      this.store.checkProximity();
     });
 
     // Mémoriser le zoom
@@ -247,5 +273,36 @@ export default {
   height: 500px;
   width: 100%;
   border: 1px solid;
+}
+.map-container { position: relative; width: 100%; }
+
+.game-overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  text-align: center;
+  max-width: 80%;
+}
+
+.success h1 { color: #42b883; }
+.error h1 { color: #ff4d4d; }
+
+.modal button {
+  margin-top: 1rem;
+  padding: 10px 20px;
+  background: #42b883;
+  color: white;
+  border: none;
+  cursor: pointer;
 }
 </style>

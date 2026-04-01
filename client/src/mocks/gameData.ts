@@ -90,6 +90,6 @@ export const mockZRR: ZRR = {
 export const mockLocalPlayer = {
   id: "moi",
   position: [45.78207, 4.86559] as [number, number],
-  role: "explorateur" as const,
+  role: "rival" as "explorateur" | "rival",
   score: 0,
 };

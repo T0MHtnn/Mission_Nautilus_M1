@@ -77,11 +77,11 @@ router.post('/ttl', validateToken, requireAdmin, (req, res) => {
 });
 
 /**
- * 3. POST /admin/player-role
+ * 3. POST /admin/species
  * Spécifie le rôle d'un joueur (rival ou explorateur, pas admin)
  * Body: { login: string, role: "rival" | "explorateur" }
  */
-router.post('/player-role', validateToken, requireAdmin, (req, res) => {
+router.post('/species', validateToken, requireAdmin, (req, res) => {
 	try {
 		const { login, role } = req.body;
 
@@ -162,6 +162,7 @@ router.post('/spawn-object', validateToken, requireAdmin, (req, res) => {
 router.get('/status', validateToken, requireAdmin, (req, res) => {
 	try {
 		const playerCount = Object.keys(gameState.players).length;
+		const playersLogins = Object.keys(gameState.players);
 		const objectCount = gameState.objects.length;
 
 		const playersByRole = {
@@ -179,6 +180,7 @@ router.get('/status', validateToken, requireAdmin, (req, res) => {
 
 		res.json({
 			playerCount: playerCount,
+			players: playersLogins,
 			playersByRole: playersByRole,
 			objectCount: objectCount,
 			zrrDefined: gameState.zrr.limits !== null,
