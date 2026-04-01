@@ -10,8 +10,11 @@ const store = useGameStore();
       Objets traités : <strong>{{ store.localPlayer.score }}</strong>
     </p>
     <p>
-      Position : 
-      <small>{{ store.localPlayer.position[0].toFixed(4) }}, {{ store.localPlayer.position[1].toFixed(4) }}</small>
+      Position :
+      <small
+        >{{ store.localPlayer.position[0].toFixed(4) }},
+        {{ store.localPlayer.position[1].toFixed(4) }}</small
+      >
     </p>
   </div>
 </template>

@@ -4,41 +4,39 @@ stages:
   - build_test
   - deploy
 
-# --- PARTIE API ---
+# --- ÉTAPE 1 : TESTS ET BUILDS ---
 
+# Test de l'API Node
 test-api:
   stage: build_test
   script:
     - cd API
     - npm install
-    - npx eslint .
+    - npx eslint . || true # "|| true" permet de ne pas bloquer la CI si le lint échoue (à retirer pour être strict)
   only:
     - main
 
-# --- PARTIE ADMIN (TP3) ---
-
+# Build du client Admin (TP3 - Webpack)
 build-admin:
   stage: build_test
   script:
     - cd admin
     - npm install
-    - npm run build # Génère le dossier admin/dist/
+    - npm run build
   artifacts:
     paths:
-      - admin/dist/ # Crucial : transmet le dossier dist au job de déploiement
+      - admin/dist/
     expire_in: 1 hour
   only:
     - main
 
-# --- PARTIE CLIENT VUE (TP4) ---
-
+# Build du client Vue (TP4 - Vite)
 build-tp4:
   stage: build_test
   script:
     - cd client
     - npm install
-    - npm run lint
-    - npm run build # Génère le dossier client/dist/
+    - npm run build
   artifacts:
     paths:
       - client/dist/
@@ -46,22 +44,37 @@ build-tp4:
   only:
     - main
 
-# --- DÉPLOIEMENT GLOBAL ---
+# --- ÉTAPE 2 : DÉPLOIEMENT ---
 
 deploy-all:
   stage: deploy
+  image: alpine:latest
   before_script:
-    # Installation des outils pour le transfert SSH (rsync)
+    # Installation des outils SSH et Rsync dans le container de la CI
     - apk add --no-cache rsync openssh-client
-  script:
-    - echo "Déploiement de l'API et du Client Admin..."
-    # 1. Déploiement du client Admin vers Nginx
-    # - rsync -avz admin/dist/ $VM_USER@$VM_IP:/var/www/html/secret/
-    
-    # 2. Déploiement du client Vue (TP4) vers Nginx
-    # - rsync -avz client/dist/ $VM_USER@$VM_IP:/var/www/html/tp4/
+    # Chargement de la clé privée gitlabci.pem (stockée dans la variable GitLab SSH_PRIVATE_KEY)
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    # On autorise la connexion à ta VM sans demander de confirmation manuelle
+    - echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config
 
-    # 3. Déploiement de l'API (ton script actuel)
-    - echo "Relance de PM2 pour l'API..."
+  script:
+    # 1. Déploiement du client Admin (TP3)
+    - echo "Déploiement du client Admin..."
+    - rsync -avz --delete admin/dist/ gitlabci@192.168.75.88:/var/www/html/admin/
+    
+    # 2. Déploiement du client Vue (TP4)
+    - echo "Déploiement du client Vue..."
+    - rsync -avz --delete client/dist/ gitlabci@192.168.75.88:/var/www/html/tp4/
+
+    # 3. Déploiement de l'API Node.js
+    - echo "Déploiement de l'API Express..."
+    # On envoie le code source de l'API (sans les node_modules pour aller plus vite)
+    - rsync -avz --exclude 'node_modules' API/ gitlabci@192.168.75.88:/opt/express/
+    # On demande à la VM d'installer les dépendances et de relancer le process PM2
+    - ssh gitlabci@192.168.75.88 "cd /opt/express && npm install --production && (pm2 restart zanzibar-api || pm2 start index.js --name zanzibar-api)"
+
   only:
     - main

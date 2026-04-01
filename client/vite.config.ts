@@ -7,15 +7,15 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd());
 
   return {
-    base: "/tp4/",
+    base: "/",
     plugins: [vue(), vueDevTools()],
     server: {
       proxy: {
         "/api": {
-          target: env.VITE_API_TARGET,
+          target: env.VITE_API_TARGET || "http://localhost:3376",
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/api/, ""),
-        }
+        },
       },
     },
   };

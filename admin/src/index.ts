@@ -3,7 +3,7 @@ import './css/style.css';
 
 import mapInit from './map';
 import initListeners, { initPositionListeners, initAdminRoutesListeners } from './form';
-import { getToken } from './auth';
+import { isAdmin } from './auth';
 import L from 'leaflet';
 
 
@@ -14,8 +14,9 @@ L.Icon.Default.mergeOptions({
 });
 
 async function init() {
-    // Vérification de sécurité
-    if (!getToken()) {
+    // Vérification de sécurité: doit être connecté ET être admin
+    if (!isAdmin()) {
+        alert("Accès refusé. Seuls les admins peuvent accéder à cette interface.");
         window.location.href = "login.html";
         return;
     }

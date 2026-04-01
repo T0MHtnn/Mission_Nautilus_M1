@@ -24,9 +24,31 @@ if (btnLogin) {
 
                 const token = response.headers.get("Authorization");
                 if (token) {
-                    setToken(token.replace("Bearer ", ""));
-                    alert("Connexion réussie !");
-                    window.location.href = "index.html";
+                    const cleanToken = token.replace("Bearer ", "");
+
+                    // Vérifier que c'est bien un token admin
+                    try {
+                        const parts = cleanToken.split(".");
+                        if (parts.length < 2) {
+                            alert("Erreur : Token invalide.");
+                            return;
+                        }
+
+                        const payload = JSON.parse(atob(parts[1]!));
+                        const species = (payload.species || "").toLowerCase();
+
+                        if (species !== "admin") {
+                            alert("Erreur : Seuls les admins peuvent se connecter à cette interface.");
+                            return;
+                        }
+
+                        setToken(cleanToken);
+                        alert("Connexion réussie !");
+                        window.location.href = "index.html";
+                    } catch (e) {
+                        alert("Erreur lors du décodage du token.");
+                        console.error(e);
+                    }
                 } else {
                     alert("Erreur : Le serveur n'a pas renvoyé de token.");
                 }

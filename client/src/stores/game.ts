@@ -4,7 +4,15 @@ import type { PlayerData, GameObject, ZRR } from "../mocks/gameData";
 import { mockLocalPlayer } from "../mocks/gameData";
 
 const API_BASE = import.meta.env.VITE_API_TARGET || "http://localhost:3376";
-const AUTH_BASE = import.meta.env.VITE_AUTH_TARGET || "http://localhost:8080/auth";
+const AUTH_BASE =
+  import.meta.env.VITE_AUTH_TARGET || "http://localhost:8080/auth";
+
+interface GameApiResponse {
+  players?: PlayerData[];
+  objects?: GameObject[];
+  processedObjects?: Array<Omit<GameObject, "discovered" | "ttl">>;
+  newScore?: number;
+}
 
 export const useGameStore = defineStore("game", () => {
   // --- État ---
@@ -12,7 +20,11 @@ export const useGameStore = defineStore("game", () => {
   const logged = ref(!!token.value);
   const login = ref(localStorage.getItem("zanzibar_login") || "");
   const isFetching = ref(false);
-  const gameMessage = ref<{ title: string; body: string; type: 'success' | 'error' } | null>(null);
+  const gameMessage = ref<{
+    title: string;
+    body: string;
+    type: "success" | "error";
+  } | null>(null);
   const isGameOver = ref(false);
 
   // Joueurs distants
@@ -31,7 +43,7 @@ export const useGameStore = defineStore("game", () => {
   });
 
   // Intervalles
-  let pollingInterval: any = null;
+  let pollingInterval: ReturnType<typeof setInterval> | null = null;
 
   // --- Getters ---
   const undiscoveredObjects = computed(() =>
@@ -110,6 +122,12 @@ export const useGameStore = defineStore("game", () => {
       logged.value = true;
       localPlayer.value.id = user;
       localPlayer.value.role = "rival";
+      // Réinitialiser complètement l'état du jeu pour une nouvelle session
+      gameMessage.value = null;
+      isGameOver.value = false;
+      players.value = [];
+      objects.value = [];
+      localPlayer.value.score = 0;
       startPolling();
       return { success: true };
     } catch {
@@ -122,11 +140,31 @@ export const useGameStore = defineStore("game", () => {
 
   /** Logout */
   function logout() {
+    const oldToken = token.value;
+
+    // Arrêter le polling immédiatement
+    stopPolling();
+
+    // Notifier le serveur pour supprimer le joueur
+    if (oldToken) {
+      fetch(`${API_BASE}/game/logout`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${oldToken}`,
+          "Content-Type": "application/json",
+        },
+      }).catch(() => {
+        // Ignorer les erreurs
+      });
+    }
+
+    // Nettoyer l'état local
     logged.value = false;
     token.value = null;
     login.value = "";
+    gameMessage.value = null;
+    isGameOver.value = false;
     localStorage.removeItem("zanzibar_token");
-    stopPolling();
   }
 
   /** Simuler le déplacement du joueur local (petit mouvement aléatoire) */
@@ -165,7 +203,7 @@ export const useGameStore = defineStore("game", () => {
 
   /** Action principale : récupère l'état du jeu depuis le serveur */
   async function updateGameState() {
-    if (!token.value) return;
+    if (!token.value || isGameOver.value) return;
     try {
       console.log("📡 [STORE] Lancement du polling...");
 
@@ -173,7 +211,7 @@ export const useGameStore = defineStore("game", () => {
         fetch(`${API_BASE}/game/position`, {
           method: "POST",
           headers: authHeaders.value,
-          body: JSON.stringify({ position: localPlayer.value.position })
+          body: JSON.stringify({ position: localPlayer.value.position }),
         }),
         fetch(`${API_BASE}/game/resources`, { headers: authHeaders.value }),
         fetch(`${API_BASE}/game/zrr`, { headers: authHeaders.value }),
@@ -189,9 +227,12 @@ export const useGameStore = defineStore("game", () => {
       }
 
       if (resRes.ok) {
-        const resData = await resRes.json();
+        const resData = (await resRes.json()) as GameApiResponse;
 
-        const me = resData.players?.find((p: any) => p.id === login.value);
+        const me = resData.players?.find(
+          (p: PlayerData) => p.id === login.value,
+        );
+
         if (me) {
           localPlayer.value.score = me.score;
         }
@@ -199,39 +240,36 @@ export const useGameStore = defineStore("game", () => {
         if (resData.players) {
           players.value = resData.players;
         }
-        const activeOnes = (resData.objects || []).map((o: any) => ({ ...o, discovered: false }));
-        const processedOnes = (resData.processedObjects || []).map((o: any) => ({
-          ...o,
-          discovered: true,
-          ttl: 0
-        }));
+
+        const activeOnes: GameObject[] = (resData.objects || [])
+          .filter((o) => o.id)
+          .map((o) => ({
+            id: o.id!,
+            position: o.position || [0, 0],
+            type: o.type || "unknown",
+            ttl: o.ttl ?? 0,
+            discovered: false,
+          }));
+
+        const processedOnes: GameObject[] = (resData.processedObjects || [])
+          .filter((o) => o.id)
+          .map((o) => ({
+            id: o.id!,
+            position: o.position || [0, 0],
+            type: o.type || "unknown",
+            ttl: 0,
+            discovered: true,
+          }));
 
         objects.value = [...activeOnes, ...processedOnes];
-
-        if (resData.objects) {
-          console.log("📦 [STORE] Objets reçus:", resData.objects?.length || 0);
-          objects.value = resData.objects.map(
-            (o: Omit<GameObject, "discovered">) => ({
-              ...o,
-              discovered: false,
-            }),
-          );
-        }
-        if (resData.processedObjects) {
-          const processed = resData.processedObjects.map(
-            (o: Omit<GameObject, "discovered" | "ttl">) => ({
-              ...o,
-              discovered: true,
-              ttl: 0,
-            }),
-          );
-          objects.value = [...objects.value, ...processed];
-        }
       }
 
       if (zrrRes.ok) {
         const zrrData = await zrrRes.json();
-        console.log("📦 [STORE] Données ZRR reçues du serveur:", JSON.stringify(zrrData));
+        console.log(
+          "📦 [STORE] Données ZRR reçues du serveur:",
+          JSON.stringify(zrrData),
+        );
 
         zrr.value = zrrData;
         console.log("ZRR mise à jour :", zrr.value);
@@ -245,15 +283,25 @@ export const useGameStore = defineStore("game", () => {
 
   /** Envoyer la position au serveur */
   async function sendPosition() {
-    if (!token.value) return;
+    if (!token.value || isGameOver.value) return;
+
     try {
-      await fetch(`${API_BASE}/game/position`, {
+      const res = await fetch(`${API_BASE}/game/position`, {
         method: "POST",
         headers: authHeaders.value,
         body: JSON.stringify({
           position: localPlayer.value.position,
         }),
       });
+      if (res.status === 403) {
+        gameMessage.value = {
+          title: "💀 GAME OVER",
+          body: "Une créature vous a intercepté !",
+          type: "error",
+        };
+        isGameOver.value = true;
+        stopPolling();
+      }
     } catch (e) {
       console.warn("Erreur envoi position:", e);
     }
@@ -282,9 +330,7 @@ export const useGameStore = defineStore("game", () => {
       const dist = distanceMeters(pos, obj.position);
       if (dist < 5) {
         obj.discovered = true;
-        console.log(
-          `Objet ${obj.id} (${obj.type}) découvert à ${dist.toFixed(1)}m !`,
-        );
+        console.log(`🎯 Contact avec un objet de type: ${obj.type}`);
         await sendPosition();
         await processObject(obj.id);
       }
@@ -293,30 +339,44 @@ export const useGameStore = defineStore("game", () => {
 
   /** Traiter un objet côté serveur */
   async function processObject(objectId: string) {
-    if (!token.value) return;
+    if (!token.value || isGameOver.value) return;
+
     try {
       const res = await fetch(`${API_BASE}/game/process-object`, {
         method: "POST",
         headers: authHeaders.value,
         body: JSON.stringify({ objectId }),
       });
+
+      if (res.status === 403) {
+        // Cas Monstre
+        let errorMsg = "Vous avez été éliminé par une créature.";
+        try {
+          const data = await res.json();
+          errorMsg = data.error || errorMsg;
+        } catch {
+          /* ignore JSON error */
+        }
+        gameMessage.value = {
+          title: "💀 GAME OVER",
+          body: errorMsg,
+          type: "error",
+        };
+        isGameOver.value = true;
+        stopPolling();
+        return;
+      }
+
       const data = await res.json();
+
       if (res.ok) {
+        // Cas Artefact
         localPlayer.value.score = data.newScore;
         gameMessage.value = {
           title: "💎 Artefact Récupéré !",
-          body: `Félicitations ! Votre score est maintenant de ${data.newScore}.`,
-          type: 'success'
+          body: `Score : ${data.newScore}`,
+          type: "success",
         };
-        console.log(`Score mis à jour: ${localPlayer.value.score}`);
-      } else if (res.status === 403 && data.error.includes("dévoré")) {
-        isGameOver.value = true;
-        gameMessage.value = {
-          title: "💀 GAME OVER",
-          body: "Vous avez servi de déjeuner à une créature marine... Votre mission s'arrête ici.",
-          type: 'error'
-        };
-        stopPolling();
       }
     } catch (e) {
       console.warn("Erreur réseau lors du traitement de l'objet", e);
@@ -337,6 +397,11 @@ export const useGameStore = defineStore("game", () => {
       console.warn("Erreur mise à jour profil");
       return false;
     }
+  }
+
+  /** Fermer le message de jeu */
+  function closeGameMessage() {
+    gameMessage.value = null;
   }
 
   if (token.value) {
@@ -370,5 +435,6 @@ export const useGameStore = defineStore("game", () => {
     checkProximity,
     processObject,
     updateProfile,
+    closeGameMessage,
   };
 });

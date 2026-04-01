@@ -1,18 +1,24 @@
 <template>
   <section class="map-container">
     <p class="content">
-      Joueurs : <strong>{{ store.players.length }}</strong> | 
-      Objets non découverts : <strong>{{ store.undiscoveredObjects.length }}</strong> | 
+      Joueurs : <strong>{{ store.players.length }}</strong> | Objets non
+      découverts : <strong>{{ store.undiscoveredObjects.length }}</strong> |
       Objets découverts : <strong>{{ store.discoveredObjects.length }}</strong>
     </p>
 
     <div id="map" class="map" ref="map"></div>
 
-    <div v-if="store.gameMessage" class="game-overlay" :class="store.gameMessage.type">
+    <div
+      v-if="store.gameMessage"
+      class="game-overlay"
+      :class="store.gameMessage.type"
+    >
       <div class="modal">
         <h1>{{ store.gameMessage.title }}</h1>
         <p>{{ store.gameMessage.body }}</p>
-        <button v-if="!store.isGameOver" @click="store.gameMessage = null">Continuer</button>
+        <button v-if="!store.isGameOver" @click="store.closeGameMessage()">
+          Continuer
+        </button>
         <button v-else @click="store.logout()">Quitter le jeu</button>
       </div>
     </div>
@@ -31,8 +37,8 @@ import type {
 import { useGameStore } from "../stores/game";
 
 // Coordonnées et zoom conservés entre montages
-let savedLat = 45.782;
-let savedLng = 4.8656;
+const savedLat = 45.782;
+const savedLng = 4.8656;
 let savedZoom = 19;
 
 // Icônes personnalisées
@@ -104,15 +110,19 @@ export default {
       const zrr = this.store.zrr;
 
       console.log("🗺️ [MAP] Tentative de dessin ZRR. État dans le store:", {
-          defined: zrr.defined,
-          hasLimits: !!zrr.limits
+        defined: zrr.defined,
+        hasLimits: !!zrr.limits,
       });
 
       if (!zrr.defined || !zrr.limits) {
-          console.log("ZRR non définie ou sans limites");
-          return;
+        console.log("ZRR non définie ou sans limites");
+        return;
       }
-      console.log("📍 [MAP] Points de dessin (SO/NE):", zrr.limits.so, zrr.limits.ne);
+      console.log(
+        "📍 [MAP] Points de dessin (SO/NE):",
+        zrr.limits.so,
+        zrr.limits.ne,
+      );
 
       const bounds: L.LatLngBoundsExpression = [
         [zrr.limits.so[0], zrr.limits.so[1]],
@@ -123,6 +133,7 @@ export default {
         weight: 3,
         fillOpacity: 0.05,
         dashArray: "10, 5",
+        interactive: false,
       }).addTo(map);
       this.zrrRectangle.bindPopup("Zone de Recherche et Récupération (ZRR)");
     },
@@ -136,8 +147,8 @@ export default {
 
       const myId = this.store.localPlayer.id.toLowerCase();
 
-      const remotePlayers = this.store.players.filter(p => 
-        p.id.toLowerCase() !== myId
+      const remotePlayers = this.store.players.filter(
+        (p) => p.id.toLowerCase() !== myId,
       );
 
       for (const player of remotePlayers) {
@@ -164,9 +175,18 @@ export default {
           icon: objectIcon(obj.discovered),
         }).addTo(map);
 
-        const popupContent = obj.discovered
-          ? `<strong>${obj.id}</strong><br>Type : ${obj.type}<br><em>Découvert</em>`
-          : `<strong>${obj.id}</strong><br>Type : ???<br>TTL : ${Math.round(obj.ttl)}s`;
+        let popupContent = "";
+
+        if (obj.discovered) {
+          popupContent = `<strong>${obj.id}</strong><br>Type : ${obj.type}<br><em>Récupéré</em>`;
+        } else {
+          const isMonster = ["creature", "monster"].includes(
+            obj.type.toLowerCase(),
+          );
+          popupContent =
+            `<strong>${isMonster ? "⚠️ Danger" : "Objet Inconnu"}</strong><br>` +
+            `TTL : ${Math.round(obj.ttl)}s`;
+        }
 
         marker.bindPopup(popupContent);
         this.objectMarkers.push(marker);
@@ -202,12 +222,21 @@ export default {
     },
   },
 
-  mounted() {
-    const map = L.map(this.$refs.map as HTMLElement, {
+  async mounted() {
+    await this.$nextTick();
+    const mapElement = this.$refs.map as HTMLElement;
+
+    if (!mapElement) return;
+
+    if (this.map) {
+      this.map.remove();
+    }
+
+    this.map = L.map(mapElement, {
       center: [savedLat, savedLng],
       zoom: savedZoom,
+      inertia: false,
     });
-    this.map = map;
 
     // Tile layer
     L.tileLayer(
@@ -222,19 +251,28 @@ export default {
         tileSize: 512,
         zoomOffset: -1,
       },
-    ).addTo(map);
+    ).addTo(this.map as LeafletMap);
 
     // Clic sur la carte
-    map.on("click", (e: LeafletMouseEvent) => {
+    this.map.on("click", (e: LeafletMouseEvent) => {
       if (this.store.isGameOver) return;
       this.store.localPlayer.position = [e.latlng.lat, e.latlng.lng];
       this.store.checkProximity();
     });
 
     // Mémoriser le zoom
-    map.on("zoomend", () => {
-      savedZoom = map.getZoom();
+    this.map.on("zoomend", () => {
+      if (this.map) {
+        savedZoom = this.map.getZoom();
+      }
     });
+
+    setTimeout(() => {
+      if (this.map) {
+        this.map.invalidateSize();
+        console.log("✅ Carte recalculée et affichée");
+      }
+    }, 200);
 
     // Premier affichage
     this.refreshAll();
@@ -274,28 +312,48 @@ export default {
   width: 100%;
   border: 1px solid;
 }
-.map-container { position: relative; width: 100%; }
+.map-container {
+  position: relative;
+  width: 100%;
+}
 
 .game-overlay {
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 99999;
 }
 
 .modal {
-  background: white;
+  background: #2c3e50;
+  color: white;
   padding: 2rem;
-  border-radius: 12px;
+  border-radius: 15px;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
   text-align: center;
   max-width: 80%;
 }
 
-.success h1 { color: #42b883; }
-.error h1 { color: #ff4d4d; }
+.game-overlay.error .modal {
+  border: 3px solid #ff4d4d;
+}
+
+.game-overlay.success .modal {
+  border-color: #42b883;
+}
+
+.success h1 {
+  color: #42b883;
+}
+.error h1 {
+  color: #ff4d4d;
+}
 
 .modal button {
   margin-top: 1rem;
@@ -304,5 +362,9 @@ export default {
   color: white;
   border: none;
   cursor: pointer;
+}
+
+.modal button.btn-quit {
+  background: #666;
 }
 </style>
