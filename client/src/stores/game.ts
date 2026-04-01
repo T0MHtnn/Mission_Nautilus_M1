@@ -180,16 +180,27 @@ export const useGameStore = defineStore("game", () => {
   function startPolling() {
     if (pollingInterval) return;
 
-    updateGameState();
+    // Première mise à jour
+    updateGameState().then(() => {
+      if (!token.value) return; // Vérifier qu'on ne s'est pas déconnecté
 
-    sendPosition().then(() => {
-      updateGameState();
+      sendPosition().then(() => {
+        if (!token.value) return; // Vérifier qu'on ne s'est pas déconnecté
+        updateGameState();
+      });
     });
 
+    // Polling régulier
     pollingInterval = setInterval(async () => {
+      if (!token.value) {
+        stopPolling();
+        return;
+      }
       simulateLocalMovement();
       await sendPosition();
+      if (!token.value) return;
       await updateGameState();
+      if (!token.value) return;
       checkProximity();
     }, 5000);
   }
@@ -317,8 +328,8 @@ export const useGameStore = defineStore("game", () => {
     const a =
       Math.sin(dLat / 2) ** 2 +
       Math.cos((p1[0] * Math.PI) / 180) *
-        Math.cos((p2[0] * Math.PI) / 180) *
-        Math.sin(dLon / 2) ** 2;
+      Math.cos((p2[0] * Math.PI) / 180) *
+      Math.sin(dLon / 2) ** 2;
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   }
 
