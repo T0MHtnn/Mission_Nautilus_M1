@@ -38,6 +38,13 @@ export const useGameStore = defineStore("game", () => {
   // ZRR
   const zrr = ref<ZRR>({ defined: false, limits: null });
 
+  // Vecteur de calibrage (différence entre Vraie position GPS et Position voulue)
+  const calibrationVector = ref<[number, number]>([0, 0]);
+
+  // Direction (en degrés, de 0 à 360)
+  const heading = ref<number>(0);
+  let lastRawPosition = ref<[number, number] | null>(null);
+
   // Joueur local (position simulée variable)
   const localPlayer = ref({
     ...mockLocalPlayer,
@@ -205,9 +212,30 @@ export const useGameStore = defineStore("game", () => {
 
       watchId = navigator.geolocation.watchPosition(
         (position) => {
-          const lat = position.coords.latitude;
-          const lon = position.coords.longitude;
+          const rawLat = position.coords.latitude;
+          const rawLon = position.coords.longitude;
           
+          // 1.3 Correction des erreurs de capteurs
+          const lat = rawLat + calibrationVector.value[0];
+          const lon = rawLon + calibrationVector.value[1];
+
+          // 1.4 Direction des joueurs (Calcul basique si la boussole n'est pas fournie ou gérée par le navigateur)
+          if (position.coords.heading !== null && !isNaN(position.coords.heading)) {
+            heading.value = position.coords.heading;
+          } else if (lastRawPosition.value) {
+            // Calcul basier (Bearing) entre deux points si heading n'est pas dispo
+            const lat1 = lastRawPosition.value[0] * Math.PI / 180;
+            const lon1 = lastRawPosition.value[1] * Math.PI / 180;
+            const lat2 = rawLat * Math.PI / 180;
+            const lon2 = rawLon * Math.PI / 180;
+            
+            const y = Math.sin(lon2 - lon1) * Math.cos(lat2);
+            const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(lon2 - lon1);
+            let brng = Math.atan2(y, x) * 180 / Math.PI;
+            heading.value = (brng + 360) % 360;
+          }
+          
+          lastRawPosition.value = [rawLat, rawLon];
           localPlayer.value.position = [lat, lon];
           console.log(`📍 GPS Mis à jour : [${lat}, ${lon}] (Précision : ${Math.round(position.coords.accuracy)}m)`);
           
@@ -457,6 +485,11 @@ export const useGameStore = defineStore("game", () => {
       const data = await res.json();
 
       if (res.ok) {
+        // 2. Actionneur (vibreur)
+        if ("vibrate" in navigator) {
+          navigator.vibrate([200, 100, 200]);
+        }
+
         // Cas Artefact
         localPlayer.value.score = data.newScore;
         gameMessage.value = {
@@ -486,6 +519,21 @@ export const useGameStore = defineStore("game", () => {
     }
   }
 
+  /** 1.3 Correction: Etalonnage et mise à jour du vecteur de calibration */
+  function calibratePosition(targetLat: number, targetLng: number) {
+    if (!lastRawPosition.value) return;
+    calibrationVector.value = [
+      targetLat - lastRawPosition.value[0],
+      targetLng - lastRawPosition.value[1]
+    ];
+    // Met a jour immediatement le localPlayer
+    localPlayer.value.position = [
+      lastRawPosition.value[0] + calibrationVector.value[0],
+      lastRawPosition.value[1] + calibrationVector.value[1]
+    ];
+    console.log(`🔧 Calibration ! Nouveau vecteur: [${calibrationVector.value[0]}, ${calibrationVector.value[1]}]`);
+  }
+
   /** Fermer le message de jeu */
   function closeGameMessage() {
     gameMessage.value = null;
@@ -508,6 +556,8 @@ export const useGameStore = defineStore("game", () => {
     players,
     objects,
     zrr,
+    calibrationVector,
+    heading,
     localPlayer,
     // Getters
     undiscoveredObjects,
@@ -524,6 +574,7 @@ export const useGameStore = defineStore("game", () => {
     checkProximity,
     processObject,
     updateProfile,
+    calibratePosition,
     closeGameMessage,
   };
 });

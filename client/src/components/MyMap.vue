@@ -53,24 +53,32 @@ const savedLng = 4.8656;
 let savedZoom = 19;
 
 // Icônes personnalisées
-const playerIcon = (role: string) =>
+const playerIcon = (role: string, heading: number = 0) =>
   L.divIcon({
     className: "custom-marker",
     html: `<div style="
       background: ${role === "explorateur" ? "#2196F3" : "#F44336"};
       width: 14px; height: 14px; border-radius: 50%;
       border: 2px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.5);
-    "></div>`,
+      transform: rotate(${heading}deg);
+      display: flex; align-items: flex-start; justify-content: center;
+    ">
+      <div style="width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; border-bottom: 6px solid white; margin-top: -6px;"></div>
+    </div>`,
     iconSize: [14, 14],
     iconAnchor: [7, 7],
   });
 
-const localPlayerIcon = L.divIcon({
+const localPlayerIcon = (heading: number = 0) => L.divIcon({
   className: "custom-marker",
   html: `<div style="
     background: #4CAF50; width: 18px; height: 18px; border-radius: 50%;
     border: 3px solid white; box-shadow: 0 0 6px rgba(0,0,0,0.6);
-  "></div>`,
+    transform: rotate(${heading}deg);
+    display: flex; align-items: flex-start; justify-content: center;
+  ">
+    <div style="width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 8px solid white; margin-top: -8px;"></div>
+  </div>`,
   iconSize: [18, 18],
   iconAnchor: [9, 9],
 });
@@ -163,8 +171,9 @@ export default {
       );
 
       for (const player of remotePlayers) {
+        // En l'absence de cap fourni dans les données distantes, on suppose 0 par défaut pour les autres
         const marker = L.marker([player.position[0], player.position[1]], {
-          icon: playerIcon(player.role),
+          icon: playerIcon(player.role, 0),
         }).addTo(map);
         marker.bindPopup(
           `<strong>${player.id}</strong><br>` +
@@ -205,12 +214,15 @@ export default {
     drawLocalPlayer() {
       const map = this.map as LeafletMap;
       const pos = this.store.localPlayer.position;
+      const heading = this.store.heading; // Cap actuel de la boussole ou du mouvement GPS
 
       if (this.localMarker) {
         this.localMarker.setLatLng([pos[0], pos[1]]);
+        // On met à jour l'icône complètement pour appliquer la rotation
+        this.localMarker.setIcon(localPlayerIcon(heading));
       } else {
         this.localMarker = L.marker([pos[0], pos[1]], {
-          icon: localPlayerIcon,
+          icon: localPlayerIcon(heading),
           zIndexOffset: 1000,
         }).addTo(map);
         this.localMarker.bindPopup(
@@ -261,11 +273,35 @@ export default {
       },
     ).addTo(this.map as LeafletMap);
 
-    // Clic sur la carte
+    // Variables pour l'appui long (calibration GPS)
+    let pressTimer: ReturnType<typeof setTimeout>;
+
+    // Clic simple pour debugger/tester
     this.map.on("click", (e: LeafletMouseEvent) => {
       if (this.store.isGameOver) return;
-      this.store.localPlayer.position = [e.latlng.lat, e.latlng.lng];
-      this.store.checkProximity();
+      // Optionnel: On peut désactiver le clic pour modifier la position
+      // ou le laisser pour le débogage seulement
+    });
+
+    // Appui long / Context menu pour calibrer
+    this.map.on("contextmenu", (e: LeafletMouseEvent) => {
+      this.store.calibratePosition(e.latlng.lat, e.latlng.lng);
+      alert(`Calibration enregistrée aux coordonnées : ${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`);
+    });
+
+    // Pour mobile, on implémente un timer mousedown/mouseup
+    this.map.on("mousedown touchstart", (e: any) => {
+      const latlng = e.latlng;
+      if (!latlng) return;
+      
+      pressTimer = setTimeout(() => {
+        this.store.calibratePosition(latlng.lat, latlng.lng);
+        alert(`Calibration mobile enregistrée : ${latlng.lat.toFixed(5)}, ${latlng.lng.toFixed(5)}`);
+      }, 1000);
+    });
+
+    this.map.on("mouseup mousemove touchend touchmove", () => {
+      clearTimeout(pressTimer);
     });
 
     // Mémoriser le zoom
