@@ -19,7 +19,7 @@
         <button v-if="!store.isGameOver" @click="store.closeGameMessage()">
           Continuer
         </button>
-        <button v-else @click="store.logout()">Quitter le jeu</button>
+        <button v-else @click="store.logout()" class="btn-quit">Quitter le jeu</button>
       </div>
     </div>
   </section>
@@ -180,12 +180,9 @@ export default {
         if (obj.discovered) {
           popupContent = `<strong>${obj.id}</strong><br>Type : ${obj.type}<br><em>Récupéré</em>`;
         } else {
-          const isMonster = ["creature", "monster"].includes(
-            obj.type.toLowerCase(),
-          );
-          popupContent =
-            `<strong>${isMonster ? "⚠️ Danger" : "Objet Inconnu"}</strong><br>` +
-            `TTL : ${Math.round(obj.ttl)}s`;
+          const isMonster = ["creature", "monster"].includes(obj.type.toLowerCase());
+          popupContent = `<strong>${isMonster ? '⚠️ Danger' : 'Objet Inconnu'}</strong><br>` +
+                        `TTL : ${Math.round(obj.ttl)}s`;
         }
 
         marker.bindPopup(popupContent);
@@ -335,7 +332,7 @@ export default {
   color: white;
   padding: 2rem;
   border-radius: 15px;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 20px rgba(0,0,0,0.5);
   text-align: center;
   max-width: 80%;
 }
