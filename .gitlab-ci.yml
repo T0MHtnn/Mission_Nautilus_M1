@@ -68,7 +68,7 @@ deploy-all:
     
     # 4. Déploiement de l'API Node.js
     - echo "Déploiement de l'API Express..."
-    - rsync -avz --delete --exclude 'node_modules' API/ gitlabci@192.168.75.88:/opt/express/
+    - rsync -avz --no-t --delete --exclude 'node_modules' API/ gitlabci@192.168.75.88:/opt/express/
     - ssh gitlabci@192.168.75.88 "cd /opt/express && npm install --production && (pm2 restart zanzibar-api || pm2 start index.js --name zanzibar-api)"
 
   only:
