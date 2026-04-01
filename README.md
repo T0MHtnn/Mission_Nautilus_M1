@@ -102,3 +102,8 @@ Front admin : npm run serve                                 -> cd D:\OneDrive - 
 Front client : npm run dev                                 -> cd D:\OneDrive - ARC INFORMATIQUE\Documents\M1\S2\Web_avancee\client
 JAR : java -jar users.jar --app.origin=http://localhost:5173      -> cd D:\OneDrive - ARC INFORMATIQUE\Documents\M1\S2\Web_avancee
 Swagger : http://localhost:8080/swagger-ui/index.html
+
+**********************
+SwaggerVM : https://192.168.75.88:8443/swagger-ui/index.html
+AdminVM: https://192.168.75.88/admin/login.html
+Client: https://192.168.75.88/

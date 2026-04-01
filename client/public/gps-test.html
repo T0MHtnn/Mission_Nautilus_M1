@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Geolocation API</title>
+</head>
+<body>
+    <h1>Test de Géolocalisation</h1>
+    <p>Lisez les résultats ci-dessous ou ouvrez la console :</p>
+    <div id="output" style="border: 1px solid #ccc; padding: 10px; background: #f9f9f9; border-radius: 5px;">
+        En attente de la position...
+    </div>
+
+    <script>
+        const output = document.getElementById('output');
+
+        if ("geolocation" in navigator) {
+            console.log("Geolocation API est supportée.");
+            
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    const accuracy = position.coords.accuracy;
+                    
+                    const msg = `Position trouvée !\nLatitude : ${lat}\nLongitude : ${lon}\nPrécision : ${accuracy} mètres.`;
+                    
+                    console.log(msg);
+                    output.innerText = msg;
+                },
+                (error) => {
+                    let errorMessage = "Erreur de géolocalisation: ";
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            errorMessage += "L'utilisateur a refusé la demande.";
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            errorMessage += "Informations indisponibles.";
+                            break;
+                        case error.TIMEOUT:
+                            errorMessage += "La demande a expiré.";
+                            break;
+                        default:
+                            errorMessage += "Une erreur inconnue est survenue.";
+                            break;
+                    }
+                    console.error(errorMessage);
+                    output.innerText = errorMessage;
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 5000,
+                    maximumAge: 0
+                }
+            );
+        } else {
+            console.error("La Geolocation API n'est pas supportée.");
+            output.innerText = "La Geolocation API n'est pas supportée par ce navigateur.";
+        }
+    </script>
+</body>
+</html>
