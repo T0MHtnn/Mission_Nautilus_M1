@@ -26,6 +26,8 @@ export const useGameStore = defineStore("game", () => {
     type: "success" | "error";
   } | null>(null);
   const isGameOver = ref(false);
+  const isLocating = ref(false);
+  const locationError = ref<string | null>(null);
 
   // Joueurs distants
   const players = ref<PlayerData[]>([]);
@@ -44,6 +46,7 @@ export const useGameStore = defineStore("game", () => {
 
   // Intervalles
   let pollingInterval: ReturnType<typeof setInterval> | null = null;
+  let watchId: number | null = null;
 
   // --- Getters ---
   const undiscoveredObjects = computed(() =>
@@ -125,10 +128,11 @@ export const useGameStore = defineStore("game", () => {
       // Réinitialiser complètement l'état du jeu pour une nouvelle session
       gameMessage.value = null;
       isGameOver.value = false;
+      locationError.value = null;
       players.value = [];
       objects.value = [];
       localPlayer.value.score = 0;
-      startPolling();
+      await startPolling();
       return { success: true };
     } catch {
       return {
@@ -164,40 +168,108 @@ export const useGameStore = defineStore("game", () => {
     login.value = "";
     gameMessage.value = null;
     isGameOver.value = false;
+    locationError.value = null;
+    isLocating.value = false;
     localStorage.removeItem("zanzibar_token");
   }
 
-  /** Simuler le déplacement du joueur local (petit mouvement aléatoire) */
-  function simulateLocalMovement() {
-    const delta = 0.00005; // ~5m
-    localPlayer.value.position = [
-      localPlayer.value.position[0] + (Math.random() - 0.5) * delta * 2,
-      localPlayer.value.position[1] + (Math.random() - 0.5) * delta * 2,
-    ];
+  /** Lancer le GPS et attendre la première position avant de demarrer le polling */
+  async function startWatchPosition(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (!("geolocation" in navigator)) {
+        locationError.value = "Le navigateur ne supporte pas la géolocalisation";
+        return reject("Nav non supporté");
+      }
+
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+      }
+
+      isLocating.value = true;
+      locationError.value = null;
+
+      // Timeout global de 1 minute (60 000 ms) pour la localisation initiale
+      const timeoutId = setTimeout(() => {
+        if (isLocating.value) {
+          isLocating.value = false;
+          locationError.value = "Impossible de récupérer la position (Délai d'une minute dépassé).";
+          if (watchId !== null) {
+            navigator.geolocation.clearWatch(watchId);
+            watchId = null;
+          }
+          reject("Timeout localisation");
+        }
+      }, 60000);
+
+      let firstLocationCaught = false;
+
+      watchId = navigator.geolocation.watchPosition(
+        (position) => {
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+          
+          localPlayer.value.position = [lat, lon];
+          console.log(`📍 GPS Mis à jour : [${lat}, ${lon}] (Précision : ${Math.round(position.coords.accuracy)}m)`);
+          
+          // Si c'est la toute première position
+          if (!firstLocationCaught) {
+            firstLocationCaught = true;
+            isLocating.value = false;
+            clearTimeout(timeoutId);
+            resolve();
+          } else {
+            // Pour les positions suivantes, on en profite pour mettre à jour la position sur le serveur
+            if (token.value && !isGameOver.value) {
+              sendPosition().catch(() => {});
+            }
+          }
+        },
+        (error) => {
+          if (firstLocationCaught) return; // Erreur après connexion réussie (ex: perte signal)
+          
+          isLocating.value = false;
+          clearTimeout(timeoutId);
+          if (error.code === error.PERMISSION_DENIED) {
+            locationError.value = "Géolocalisation refusée par l'utilisateur.";
+          } else {
+            locationError.value = "Impossible de récupérer votre position GPS.";
+          }
+          reject(error.message);
+        },
+        {
+          enableHighAccuracy: true,
+          maximumAge: 0,
+          timeout: 10000 
+        }
+      );
+    });
   }
 
-  /** Démarrer le polling toutes les 5s (positions + ressources + envoi position) */
-  function startPolling() {
+  /** Démarrer le polling toutes les 5s (positions + ressources) */
+  async function startPolling() {
     if (pollingInterval) return;
 
+    try {
+      // 1. On attend le fix GPS initial
+      await startWatchPosition();
+    } catch (e) {
+      console.error("Échec de la géolocalisation: ", e);
+      // On s'arrête ici si pas de GPS (au bout d'une minute d'attente ou si refusé)
+      return;
+    }
+
     // Première mise à jour
-    updateGameState().then(() => {
-      if (!token.value) return; // Vérifier qu'on ne s'est pas déconnecté
-
-      sendPosition().then(() => {
-        if (!token.value) return; // Vérifier qu'on ne s'est pas déconnecté
-        updateGameState();
-      });
-    });
-
-    // Polling régulier
+    updateGameState();
+    
+    // Polling régulier de l'état du jeu (le GPS, lui, pousse indépendamment via watchPosition)
     pollingInterval = setInterval(async () => {
       if (!token.value) {
         stopPolling();
         return;
       }
-      simulateLocalMovement();
-      await sendPosition();
+      
+      // La ligne simulateLocalMovement() a été retirée pour utiliser la vraie position GPS
+
       if (!token.value) return;
       await updateGameState();
       if (!token.value) return;
@@ -209,6 +281,10 @@ export const useGameStore = defineStore("game", () => {
     if (pollingInterval) {
       clearInterval(pollingInterval);
       pollingInterval = null;
+    }
+    if (watchId !== null) {
+      navigator.geolocation.clearWatch(watchId);
+      watchId = null;
     }
   }
 
@@ -423,6 +499,8 @@ export const useGameStore = defineStore("game", () => {
     // State
     gameMessage,
     isGameOver,
+    isLocating,
+    locationError,
     token,
     logged,
     login,

@@ -6,7 +6,18 @@
       Objets découverts : <strong>{{ store.discoveredObjects.length }}</strong>
     </p>
 
-    <div id="map" class="map" ref="map"></div>
+    <div v-if="store.isLocating" class="gps-loading">
+      <h2>🌍 Recherche du signal GPS en cours...</h2>
+      <p>Veuillez patienter pendant que nous vous localisons.</p>
+    </div>
+    
+    <div v-else-if="store.locationError" class="gps-error">
+      <h2>❌ Erreur GPS : {{ store.locationError }}</h2>
+      <p>Vous devez autoriser la géolocalisation pour jouer.</p>
+      <button @click="store.startPolling()">Réessayer</button>
+    </div>
+
+    <div id="map" class="map" ref="map" v-show="!store.isLocating && !store.locationError"></div>
 
     <div
       v-if="store.gameMessage"
@@ -304,11 +315,55 @@ export default {
 </script>
 
 <style scoped>
-.map {
-  height: 500px;
+.map-container {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 100px); /* Occupe la hauteur de l'écran moins le header/nav potentiel */
   width: 100%;
-  border: 1px solid;
 }
+
+.map {
+  flex: 1; /* Prend tout l'espace restant disponible */
+  width: 100%;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.content {
+  margin-bottom: 10px;
+}
+
+.gps-loading, .gps-error {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background-color: #f9f9f9;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  text-align: center;
+  padding: 20px;
+}
+
+.gps-error {
+  background-color: #ffebee;
+  color: #c62828;
+  border-color: #ef9a9a;
+}
+
+.gps-error button {
+  margin-top: 15px;
+  padding: 10px 20px;
+  background-color: #d32f2f;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
 .map-container {
   position: relative;
   width: 100%;

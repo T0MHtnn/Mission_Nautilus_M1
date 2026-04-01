@@ -4,19 +4,16 @@ stages:
   - build_test
   - deploy
 
-# --- ÉTAPE 1 : TESTS ET BUILDS ---
-
-# Test de l'API Node
+# --- ÉTAPE 1 : TESTS ET BUILDS (Inchangé, c'est OK) ---
 test-api:
   stage: build_test
   script:
     - cd API
     - npm install
-    - npx eslint . || true # "|| true" permet de ne pas bloquer la CI si le lint échoue (à retirer pour être strict)
+    - npx eslint . || true
   only:
     - main
 
-# Build du client Admin (TP3 - Webpack)
 build-admin:
   stage: build_test
   script:
@@ -30,7 +27,6 @@ build-admin:
   only:
     - main
 
-# Build du client Vue (TP4 - Vite)
 build-tp4:
   stage: build_test
   script:
@@ -50,30 +46,29 @@ deploy-all:
   stage: deploy
   image: alpine:latest
   before_script:
-    # Installation des outils SSH et Rsync dans le container de la CI
     - apk add --no-cache rsync openssh-client
-    # Chargement de la clé privée gitlabci.pem (stockée dans la variable GitLab SSH_PRIVATE_KEY)
     - eval $(ssh-agent -s)
     - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
     - mkdir -p ~/.ssh
     - chmod 700 ~/.ssh
-    # On autorise la connexion à ta VM sans demander de confirmation manuelle
     - echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config
 
   script:
-    # 1. Déploiement du client Admin (TP3)
-    - echo "Déploiement du client Admin..."
+    # 1. Création forcée du dossier admin sur la VM (au cas où)
+    - ssh gitlabci@192.168.75.88 "mkdir -p /var/www/html/admin"
+
+    # 2. Déploiement du client Vue (TP4) à la RACINE d'abord
+    # On utilise --exclude 'admin/' pour que rsync ne touche PAS au dossier admin
+    - echo "Déploiement du client Vue à la racine..."
+    - rsync -avz --delete --exclude 'admin/' client/dist/ gitlabci@192.168.75.88:/var/www/html/
+
+    # 3. Déploiement du client Admin (TP3) dans son SOUS-DOSSIER ensuite
+    - echo "Déploiement du client Admin dans /admin/..."
     - rsync -avz --delete admin/dist/ gitlabci@192.168.75.88:/var/www/html/admin/
     
-    # 2. Déploiement du client Vue (TP4)
-    - echo "Déploiement du client Vue..."
-    - rsync -avz --delete client/dist/ gitlabci@192.168.75.88:/var/www/html/
-
-    # 3. Déploiement de l'API Node.js
+    # 4. Déploiement de l'API Node.js
     - echo "Déploiement de l'API Express..."
-    # On envoie le code source de l'API (sans les node_modules pour aller plus vite)
-    - rsync -avz --exclude 'node_modules' API/ gitlabci@192.168.75.88:/opt/express/
-    # On demande à la VM d'installer les dépendances et de relancer le process PM2
+    - rsync -avz --delete --exclude 'node_modules' API/ gitlabci@192.168.75.88:/opt/express/
     - ssh gitlabci@192.168.75.88 "cd /opt/express && npm install --production && (pm2 restart zanzibar-api || pm2 start index.js --name zanzibar-api)"
 
   only:
