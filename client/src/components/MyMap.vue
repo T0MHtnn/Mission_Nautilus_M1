@@ -106,6 +106,7 @@ export default {
       localMarker: null as Marker | null,
       zrrRectangle: null as Rectangle | null,
       unwatchStore: null as (() => void) | null,
+      wakeLock: null as any,
     };
   },
   computed: {
@@ -240,6 +241,35 @@ export default {
       this.drawObjects();
       this.drawLocalPlayer();
     },
+
+    /** Gérer le Wake Lock pour empêcher l'écran de se mettre en veille */
+    async requestWakeLock() {
+      try {
+        if ("wakeLock" in navigator) {
+          this.wakeLock = await (navigator as any).wakeLock.request("screen");
+          console.log("🔒 Wake Lock activé: l'écran restera allumé.");
+          this.wakeLock.addEventListener("release", () => {
+            console.log("🔓 Wake Lock relâché: l'écran peut s'éteindre.");
+          });
+        }
+      } catch (err: any) {
+        console.error(`Erreur WakeLock: ${err.name}, ${err.message}`);
+      }
+    },
+
+    releaseWakeLock() {
+      if (this.wakeLock !== null) {
+        this.wakeLock.release().then(() => {
+          this.wakeLock = null;
+        });
+      }
+    },
+
+    handleVisibilityChange() {
+      if (document.visibilityState === "visible") {
+        this.requestWakeLock();
+      }
+    }
   },
 
   async mounted() {
@@ -325,9 +355,19 @@ export default {
     this.unwatchStore = this.store.$subscribe(() => {
       this.refreshAll();
     });
+
+    // Activer le mode Wake Lock
+    this.requestWakeLock();
+    
+    // Gérer le changement de visibilité (le navigateur relâche le wakelock quand l'onglet est caché)
+    document.addEventListener("visibilitychange", this.handleVisibilityChange);
   },
 
   beforeUnmount() {
+    // Relâcher le Wake Lock
+    this.releaseWakeLock();
+    document.removeEventListener("visibilitychange", this.handleVisibilityChange);
+
     // Nettoyer le watcher
     if (this.unwatchStore) {
       this.unwatchStore();
