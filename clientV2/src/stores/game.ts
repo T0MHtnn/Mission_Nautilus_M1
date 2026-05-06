@@ -3,6 +3,8 @@ import { ref, computed } from "vue";
 import type { PlayerData, GameObject, ZRR } from "../mocks/gameData";
 import { mockLocalPlayer } from "../mocks/gameData";
 
+const targetPositions = ref(new Map<string, [number, number]>());
+let animationFrameId: number | null = null;
 const API_BASE = import.meta.env.VITE_API_TARGET || "http://localhost:3376";
 const AUTH_BASE =
   import.meta.env.VITE_AUTH_TARGET || "http://localhost:8080/auth";
@@ -341,13 +343,12 @@ export const useGameStore = defineStore("game", () => {
       if (posRes.ok) {
         const posData = await posRes.json();
         if (posData.players) {
-          players.value = posData.players;
+          players.value = posData.players.filter((p: PlayerData) => p.role !== 'rival');
         }
       }
 
       if (resRes.ok) {
         const resData = (await resRes.json()) as GameApiResponse;
-
         performance.mark('start-resources-sync');
 
         const me = resData.players?.find(
@@ -357,32 +358,35 @@ export const useGameStore = defineStore("game", () => {
         if (me) {
           localPlayer.value.score = me.score;
         }
+        const apiObjects = [...(resData.objects || []), ...(resData.processedObjects || [])];
 
-        if (resData.players) {
-          players.value = resData.players;
-        }
+        objects.value = apiObjects.map(newObj => {
+          const existingObj = objects.value.find(o => o.id === newObj.id);
 
-        const activeOnes: GameObject[] = (resData.objects || [])
-          .filter((o) => o.id)
-          .map((o) => ({
-            id: o.id!,
-            position: o.position || [0, 0],
-            type: o.type || "unknown",
-            ttl: o.ttl ?? 0,
-            discovered: false,
-          }));
+          const currentPos = existingObj ? existingObj.position : (newObj.position || [0, 0]);
 
-        const processedOnes: GameObject[] = (resData.processedObjects || [])
-          .filter((o) => o.id)
-          .map((o) => ({
-            id: o.id!,
-            position: o.position || [0, 0],
-            type: o.type || "unknown",
-            ttl: 0,
-            discovered: true,
-          }));
+          const isProcessed = resData.processedObjects?.some(p => p.id === newObj.id) ?? false;
 
-        objects.value = [...activeOnes, ...processedOnes];
+          return {
+            ...newObj,
+            position: currentPos,
+            discovered: isProcessed
+          } as GameObject;
+        });
+
+        objects.value.forEach(obj => {
+          if (!obj.discovered && !targetPositions.value.has(obj.id)) {
+            const offsetLat = (Math.random() - 0.5) * 0.0008;
+            const offsetLon = (Math.random() - 0.5) * 0.0008;
+            targetPositions.value.set(obj.id, [
+              obj.position[0] + offsetLat,
+              obj.position[1] + offsetLon
+            ]);
+          }
+        });
+
+        // Lancement de l'animation si elle n'est pas active
+        if (!animationFrameId) animateObjects();
 
         performance.mark('end-resources-sync');
         performance.measure('Synchronisation Ressources', 'start-resources-sync', 'end-resources-sync');
@@ -406,6 +410,35 @@ export const useGameStore = defineStore("game", () => {
     } catch (e) {
       console.warn("Erreur updateGameState (utilisation des mocks):", e);
     }
+  }
+
+  function animateObjects() {
+    const step = 0.005;
+    const tolerance = 0.00001;
+
+    objects.value = objects.value.map(obj => {
+      const target = targetPositions.value.get(obj.id);
+
+      if (target && !obj.discovered) {
+        const distLat = Math.abs(target[0] - obj.position[0]);
+        const distLon = Math.abs(target[1] - obj.position[1]);
+
+        if (distLat < tolerance && distLon < tolerance) {
+          targetPositions.value.delete(obj.id);
+        }
+
+        return {
+          ...obj,
+          position: [
+            obj.position[0] + (target[0] - obj.position[0]) * step,
+            obj.position[1] + (target[1] - obj.position[1]) * step
+          ] as [number, number]
+        };
+      }
+      return obj;
+    });
+
+    animationFrameId = requestAnimationFrame(animateObjects);
   }
 
   /** Envoyer la position au serveur */

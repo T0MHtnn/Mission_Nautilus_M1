@@ -129,16 +129,16 @@ export default {
       }
       const zrr = this.store.zrr;
 
-      console.log("🗺️ [MAP] Tentative de dessin ZRR. État dans le store:", {
+      console.debug("🗺️ [MAP] Tentative de dessin ZRR. État dans le store:", {
         defined: zrr.defined,
         hasLimits: !!zrr.limits,
       });
 
       if (!zrr.defined || !zrr.limits) {
-        console.log("ZRR non définie ou sans limites");
+        console.debug("ZRR non définie ou sans limites");
         return;
       }
-      console.log(
+      console.debug(
         "📍 [MAP] Points de dessin (SO/NE):",
         zrr.limits.so,
         zrr.limits.ne,
@@ -247,9 +247,9 @@ export default {
       try {
         if ("wakeLock" in navigator) {
           this.wakeLock = await (navigator as any).wakeLock.request("screen");
-          console.log("🔒 Wake Lock activé: l'écran restera allumé.");
+          console.debug("🔒 Wake Lock activé: l'écran restera allumé.");
           this.wakeLock.addEventListener("release", () => {
-            console.log("🔓 Wake Lock relâché: l'écran peut s'éteindre.");
+            console.debug("🔓 Wake Lock relâché: l'écran peut s'éteindre.");
           });
         }
       } catch (err: any) {
@@ -344,7 +344,7 @@ export default {
     setTimeout(() => {
       if (this.map) {
         this.map.invalidateSize();
-        console.log("✅ Carte recalculée et affichée");
+        console.debug("✅ Carte recalculée et affichée");
       }
     }, 200);
 
