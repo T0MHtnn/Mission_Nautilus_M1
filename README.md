@@ -97,10 +97,10 @@ L'API a été testée en utilisant **Jasmine**. Les tests couvrent les points su
 
 
 Lancer :
-API node : npm start                                          -> cd D:\OneDrive - ARC INFORMATIQUE\Documents\M1\S2\Web_avancee\API
-Front admin : npm run serve                                 -> cd D:\OneDrive - ARC INFORMATIQUE\Documents\M1\S2\Web_avancee\admin
-Front client : npm run dev                                 -> cd D:\OneDrive - ARC INFORMATIQUE\Documents\M1\S2\Web_avancee\client
-JAR : java -jar users.jar --app.origin=http://localhost:5173      -> cd D:\OneDrive - ARC INFORMATIQUE\Documents\M1\S2\Web_avancee
+API node : npm start                                              -> cd /Web_avancee/API
+Front admin : npm run serve                                       -> cd /Web_avancee/admin
+Front client : npm run dev                                        -> cd /Web_avancee/client
+JAR : java -jar users.jar --app.origin=http://localhost:5173      -> cd /Web_avancee
 Swagger : http://localhost:8080/swagger-ui/index.html
 
 **********************

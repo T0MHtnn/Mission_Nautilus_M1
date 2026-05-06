@@ -335,6 +335,7 @@ export const useGameStore = defineStore("game", () => {
         fetch(`${API_BASE}/game/zrr`, { headers: authHeaders.value }),
       ]);
 
+      performance.mark('start-game-logic');
       console.log("📡 [STORE] Statut réponse ZRR:", zrrRes.status);
 
       if (posRes.ok) {
@@ -346,6 +347,8 @@ export const useGameStore = defineStore("game", () => {
 
       if (resRes.ok) {
         const resData = (await resRes.json()) as GameApiResponse;
+
+        performance.mark('start-resources-sync');
 
         const me = resData.players?.find(
           (p: PlayerData) => p.id === login.value,
@@ -380,6 +383,9 @@ export const useGameStore = defineStore("game", () => {
           }));
 
         objects.value = [...activeOnes, ...processedOnes];
+
+        performance.mark('end-resources-sync');
+        performance.measure('Synchronisation Ressources', 'start-resources-sync', 'end-resources-sync');
       }
 
       if (zrrRes.ok) {
@@ -394,6 +400,9 @@ export const useGameStore = defineStore("game", () => {
       } else {
         console.error("❌ [STORE] Erreur sur la route /zrr");
       }
+
+      performance.mark('end-game-logic');
+      performance.measure('Traitement Logique Jeu', 'start-game-logic', 'end-game-logic');
     } catch (e) {
       console.warn("Erreur updateGameState (utilisation des mocks):", e);
     }
