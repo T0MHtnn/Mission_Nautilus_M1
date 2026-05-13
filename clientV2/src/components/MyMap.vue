@@ -103,6 +103,7 @@ export default {
       map: null as LeafletMap | null,
       playerMarkers: [] as Marker[],
       objectMarkers: [] as Marker[],
+      uncertaintyCircles: [] as L.Circle[],
       localMarker: null as Marker | null,
       zrrRectangle: null as Rectangle | null,
       unwatchStore: null as (() => void) | null,
@@ -238,6 +239,7 @@ export default {
       if (!this.map) return;
       this.drawZRR();
       this.drawPlayers();
+      this.drawUncertaintyCircles();
       this.drawObjects();
       this.drawLocalPlayer();
     },
@@ -269,7 +271,27 @@ export default {
       if (document.visibilityState === "visible") {
         this.requestWakeLock();
       }
-    }
+    },
+
+    drawUncertaintyCircles() {
+      const map = this.map as LeafletMap;
+      
+      for (const c of this.uncertaintyCircles) c.remove();
+      this.uncertaintyCircles = [];
+
+      for (const obj of this.store.undiscoveredObjects) {
+        const circle = L.circle([obj.position[0], obj.position[1]], {
+          radius: 100,
+          color: '#9C27B0',
+          fillColor: '#9C27B0',
+          fillOpacity: 0.15,
+          weight: 1,
+          interactive: false
+        }).addTo(map);
+        
+        this.uncertaintyCircles.push(circle);
+      }
+    },
   },
 
   async mounted() {
@@ -375,10 +397,12 @@ export default {
     }
     for (const m of this.playerMarkers) m.remove();
     for (const m of this.objectMarkers) m.remove();
+    for (const c of this.uncertaintyCircles) c.remove();
     if (this.localMarker) this.localMarker.remove();
     if (this.zrrRectangle) this.zrrRectangle.remove();
     this.playerMarkers = [];
     this.objectMarkers = [];
+    this.uncertaintyCircles = [];
     this.localMarker = null;
     this.zrrRectangle = null;
 
