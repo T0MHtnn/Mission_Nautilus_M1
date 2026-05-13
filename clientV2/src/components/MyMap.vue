@@ -415,7 +415,7 @@ export default {
     this.zrrRectangle = null;
 
     if (this.waterOverlay) {
-      this.waterOverlay.stop();
+      this.waterOverlay.destroy();
       this.waterOverlay = null;
     }
 
