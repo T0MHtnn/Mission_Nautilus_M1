@@ -55,6 +55,7 @@ export const useGameStore = defineStore("game", () => {
 
   // Intervalles
   let pollingInterval: ReturnType<typeof setInterval> | null = null;
+  let ttlInterval: ReturnType<typeof setInterval> | null = null;
   let watchId: number | null = null;
 
   // --- Getters ---
@@ -278,6 +279,17 @@ export const useGameStore = defineStore("game", () => {
   /** Démarrer le polling toutes les 5s (positions + ressources) */
   async function startPolling() {
     if (pollingInterval) return;
+    pollingInterval = setInterval(updateGameState, 5000);
+    updateGameState();
+    // Décroissance du TTL entre les polls
+    ttlInterval = setInterval(() => {
+      for (const obj of objects.value) {
+        if (!obj.discovered && obj.ttl > 0) {
+          obj.ttl = Math.max(0, obj.ttl - 1);
+        }
+      }
+    }, 1000);
+
     const startTime = performance.now();
 
     try {
@@ -314,6 +326,10 @@ export const useGameStore = defineStore("game", () => {
     if (pollingInterval) {
       clearInterval(pollingInterval);
       pollingInterval = null;
+    }
+    if (ttlInterval) {
+      clearInterval(ttlInterval);
+      ttlInterval = null;
     }
     if (watchId !== null) {
       navigator.geolocation.clearWatch(watchId);

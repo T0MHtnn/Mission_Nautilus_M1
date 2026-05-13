@@ -2,6 +2,10 @@
 import HelloWorld from "./components/HelloWorld.vue";
 import Login from "./components/Login.vue";
 import { useGameStore } from "./stores/game";
+import { useTheme } from './composables/useTheme'
+const { loadTheme, startLightSensor } = useTheme()
+loadTheme()
+startLightSensor()
 
 export default {
   name: "App",

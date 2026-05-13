@@ -10,16 +10,6 @@ const lat = 45.782, lng = 4.8656, zoom = 19;
 
 let mymap: L.Map;
 
-const token = localStorage.getItem('admin_token');
-if (token) {
-    console.log("🚀 Admin détecté, redémarrage du polling...");
-
-    fetchGameData();
-
-    setInterval(fetchGameData, 2000);
-}
-
-
 //Icon Rival
 const rivalIcon = L.divIcon({
     html: `<div style="font-size: 24px;">🥷</div>`,

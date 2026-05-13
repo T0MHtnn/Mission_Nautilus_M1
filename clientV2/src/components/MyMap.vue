@@ -46,6 +46,8 @@ import type {
   Rectangle,
 } from "leaflet";
 import { useGameStore } from "../stores/game";
+// @ts-ignore
+import createWaterOverlay from '../utils/waterOverlay.js';
 
 // Coordonnées et zoom conservés entre montages
 const savedLat = 45.782;
@@ -108,6 +110,7 @@ export default {
       zrrRectangle: null as Rectangle | null,
       unwatchStore: null as (() => void) | null,
       wakeLock: null as any,
+      waterOverlay: null as any,
     };
   },
   computed: {
@@ -370,6 +373,8 @@ export default {
       }
     }, 200);
 
+    this.waterOverlay = createWaterOverlay(this.map, { bubbleCount: 60, bubbleMinR: 2, bubbleMaxR: 8 });
+
     // Premier affichage
     this.refreshAll();
 
@@ -405,6 +410,11 @@ export default {
     this.uncertaintyCircles = [];
     this.localMarker = null;
     this.zrrRectangle = null;
+
+    if (this.waterOverlay) {
+      this.waterOverlay.stop();
+      this.waterOverlay = null;
+    }
 
     if (this.map) {
       this.map.remove();

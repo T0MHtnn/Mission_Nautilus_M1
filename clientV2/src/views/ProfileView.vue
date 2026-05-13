@@ -1,5 +1,6 @@
 <script lang="ts">
 import { useGameStore } from "../stores/game";
+import { useTheme } from '../composables/useTheme'
 
 export default {
   name: "ProfileView",
@@ -10,6 +11,7 @@ export default {
       imageUrl: "",
       message: "",
       error: "",
+      selectedTheme: localStorage.getItem('zanzibar_theme') || 'auto',
     };
   },
   computed: {
@@ -39,6 +41,10 @@ export default {
       } else {
         this.error = "Erreur lors de la mise à jour du profil";
       }
+    },
+    handleThemeChange() {
+      const { applyTheme } = useTheme()
+      applyTheme(this.selectedTheme as 'light' | 'dark' | 'auto')
     },
   },
 };
@@ -83,6 +89,15 @@ export default {
 
       <p v-if="message" class="success">{{ message }}</p>
       <p v-if="error" class="error">{{ error }}</p>
+
+      <div class="field">
+        <label for="theme">Thème</label>
+        <select id="theme" v-model="selectedTheme" @change="handleThemeChange">
+          <option value="auto">Automatique (luminosité)</option>
+          <option value="light">Clair</option>
+          <option value="dark">Sombre</option>
+        </select>
+      </div>
     </div>
 
     <div class="stats">
@@ -152,8 +167,16 @@ button:hover {
 .stats {
   margin-top: 30px;
   padding: 15px;
-  background: #f5f5f5;
+  background: var(--color-background-soft);
   border-radius: 8px;
   max-width: 450px;
+}
+
+select {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
 }
 </style>
