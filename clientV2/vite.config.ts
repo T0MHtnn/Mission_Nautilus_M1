@@ -1,6 +1,7 @@
 import { defineConfig, loadEnv } from "vite";
 import vue from "@vitejs/plugin-vue";
 import vueDevTools from "vite-plugin-vue-devtools";
+import compression from "vite-plugin-compression";
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
@@ -8,7 +9,22 @@ export default defineConfig(({ mode }) => {
 
   return {
     base: "/",
-    plugins: [vue(), vueDevTools()],
+    plugins: [
+      vue(),
+      vueDevTools(),
+      compression({ algorithm: 'gzip', ext: '.gz' }),
+      compression({ algorithm: 'brotliCompress', ext: '.br' }),
+    ],
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            leaflet: ['leaflet'],
+            vue: ['vue', 'vue-router', 'pinia'],
+          }
+        }
+      }
+    },
     server: {
       proxy: {
         "/api": {

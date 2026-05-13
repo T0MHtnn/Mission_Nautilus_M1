@@ -8,12 +8,14 @@ const router = createRouter({
     {
       path: "/",
       name: "home",
-      component: HomeView,
+      component: () => import("../views/HomeView.vue"),
     },
     {
       path: "/map",
       name: "map",
       component: () => import("../views/MapView.vue"),
+      // @ts-ignore
+      prefetch: true,
     },
     {
       path: "/profile",
