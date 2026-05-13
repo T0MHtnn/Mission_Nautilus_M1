@@ -279,8 +279,7 @@ export const useGameStore = defineStore("game", () => {
   /** Démarrer le polling toutes les 5s (positions + ressources) */
   async function startPolling() {
     if (pollingInterval) return;
-    pollingInterval = setInterval(updateGameState, 5000);
-    updateGameState();
+
     // Décroissance du TTL entre les polls
     ttlInterval = setInterval(() => {
       for (const obj of objects.value) {
@@ -291,31 +290,22 @@ export const useGameStore = defineStore("game", () => {
     }, 1000);
 
     const startTime = performance.now();
-
     try {
-      // On attend le fix GPS initial
       await startWatchPosition();
       const endTime = performance.now();
       console.log(`Performance : Fix GPS obtenu en ${Math.round(endTime - startTime)}ms`);
     } catch (e) {
       console.error("Échec de la géolocalisation: ", e);
-      // On s'arrête ici si pas de GPS (au bout d'une minute d'attente ou si refusé)
       return;
     }
 
-    // Première mise à jour
     updateGameState();
 
-    // Polling régulier de l'état du jeu (le GPS, lui, pousse indépendamment via watchPosition)
     pollingInterval = setInterval(async () => {
       if (!token.value) {
         stopPolling();
         return;
       }
-
-      // La ligne simulateLocalMovement() a été retirée pour utiliser la vraie position GPS
-
-      if (!token.value) return;
       await updateGameState();
       if (!token.value) return;
       checkProximity();
@@ -367,45 +357,34 @@ export const useGameStore = defineStore("game", () => {
         const resData = (await resRes.json()) as GameApiResponse;
         performance.mark('start-resources-sync');
 
-        const me = resData.players?.find(
-          (p: PlayerData) => p.id === login.value,
-        );
+        const me = resData.players?.find((p: PlayerData) => p.id === login.value);
+        if (me) localPlayer.value.score = me.score;
 
-        if (me) {
-          localPlayer.value.score = me.score;
-        }
-        const apiObjects = [...(resData.objects || []), ...(resData.processedObjects || [])];
+        const existingMap = new Map(objects.value.map(o => [o.id, o]))
+        const apiObjects = [...(resData.objects || []), ...(resData.processedObjects || [])]
 
         objects.value = apiObjects.map(newObj => {
-          const existingObj = objects.value.find(o => o.id === newObj.id);
-
-          const currentPos = existingObj ? existingObj.position : (newObj.position || [0, 0]);
-
-          const isProcessed = resData.processedObjects?.some(p => p.id === newObj.id) ?? false;
-
-          return {
-            ...newObj,
-            position: currentPos,
-            discovered: isProcessed
-          } as GameObject;
-        });
+          const existingObj = existingMap.get(newObj.id)
+          const currentPos = existingObj ? existingObj.position : (newObj.position || [0, 0])
+          const isProcessed = resData.processedObjects?.some(p => p.id === newObj.id) ?? false
+          return { ...newObj, position: currentPos, discovered: isProcessed } as GameObject
+        })
 
         objects.value.forEach(obj => {
           if (!obj.discovered && !targetPositions.value.has(obj.id)) {
-            const offsetLat = (Math.random() - 0.5) * 0.0008;
-            const offsetLon = (Math.random() - 0.5) * 0.0008;
+            const offsetLat = (Math.random() - 0.5) * 0.0008
+            const offsetLon = (Math.random() - 0.5) * 0.0008
             targetPositions.value.set(obj.id, [
               obj.position[0] + offsetLat,
               obj.position[1] + offsetLon
-            ]);
+            ])
           }
-        });
+        })
 
-        // Lancement de l'animation si elle n'est pas active
-        if (!animationFrameId) animateObjects();
+        if (!animationFrameId) animateObjects()
 
-        performance.mark('end-resources-sync');
-        performance.measure('Synchronisation Ressources', 'start-resources-sync', 'end-resources-sync');
+        performance.mark('end-resources-sync')
+        performance.measure('Synchronisation Ressources', 'start-resources-sync', 'end-resources-sync')
       }
 
       if (zrrRes.ok) {
@@ -431,30 +410,34 @@ export const useGameStore = defineStore("game", () => {
   function animateObjects() {
     const step = 0.005;
     const tolerance = 0.00001;
+    let hasChanges = false;
 
-    objects.value = objects.value.map(obj => {
-      const target = targetPositions.value.get(obj.id);
+    const objectsMap = new Map(objects.value.map(o => [o.id, o]))
 
-      if (target && !obj.discovered) {
-        const distLat = Math.abs(target[0] - obj.position[0]);
-        const distLon = Math.abs(target[1] - obj.position[1]);
+    for (const [id, target] of targetPositions.value) {
+      const obj = objectsMap.get(id)
+      if (!obj || obj.discovered) continue
 
-        if (distLat < tolerance && distLon < tolerance) {
-          targetPositions.value.delete(obj.id);
-        }
+      const distLat = Math.abs(target[0] - obj.position[0])
+      const distLon = Math.abs(target[1] - obj.position[1])
 
-        return {
-          ...obj,
-          position: [
-            obj.position[0] + (target[0] - obj.position[0]) * step,
-            obj.position[1] + (target[1] - obj.position[1]) * step
-          ] as [number, number]
-        };
+      if (distLat < tolerance && distLon < tolerance) {
+        targetPositions.value.delete(id)
+        continue
       }
-      return obj;
-    });
 
-    animationFrameId = requestAnimationFrame(animateObjects);
+      obj.position = [
+        obj.position[0] + (target[0] - obj.position[0]) * step,
+        obj.position[1] + (target[1] - obj.position[1]) * step
+      ] as [number, number]
+      hasChanges = true
+    }
+
+    if (hasChanges) {
+      objects.value = [...objects.value]
+    }
+
+    animationFrameId = requestAnimationFrame(animateObjects)
   }
 
   /** Envoyer la position au serveur */
