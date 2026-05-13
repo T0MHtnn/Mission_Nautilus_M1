@@ -1,11 +1,14 @@
-<script setup lang="ts">
-// On importe le composant que tu as créé tout à l'heure
-import PlayerStatus from "../components/PlayerStatus.vue";
+<script lang="ts">
+import { t, currentLanguage } from '../composables/usePreferences'
+export default {
+  name: 'HomeView',
+  computed: { t: () => t, lang() { return currentLanguage.value } }
+}
 </script>
 
 <template>
-  <main>
-    <h1>Tableau de bord Zanzibar</h1>
-    <PlayerStatus />
-  </main>
+  <div class="home">
+    <h1>{{ t('welcome') }}</h1>
+    <p>{{ t('connectPrompt') }}</p>
+  </div>
 </template>

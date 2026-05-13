@@ -1,10 +1,16 @@
-<script setup lang="ts">
-import MyMap from "../components/MyMap.vue";
+<script lang="ts">
+import MyMap from '../components/MyMap.vue'
+import { t, currentLanguage } from '../composables/usePreferences'
+export default {
+  name: 'MapView',
+  components: { MyMap },
+  computed: { t: () => t, lang() { return currentLanguage.value } }
+}
 </script>
 
 <template>
-  <main>
-    <h1>Carte Zanzibar</h1>
+  <div>
+    <h2>{{ t('map') }}</h2>
     <MyMap />
-  </main>
+  </div>
 </template>

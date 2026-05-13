@@ -3,13 +3,18 @@ import HelloWorld from "./components/HelloWorld.vue";
 import Login from "./components/Login.vue";
 import { useGameStore } from "./stores/game";
 import { useTheme } from './composables/useTheme'
-const { loadTheme, startLightSensor } = useTheme()
-loadTheme()
-startLightSensor()
+import { usePreferences, t, currentLanguage } from './composables/usePreferences'
 
 export default {
   name: "App",
   components: { HelloWorld, Login },
+  mounted() {
+    const store = useGameStore()
+    const { loadPreferences } = usePreferences(store.login || 'default')
+    loadPreferences()
+    const { startLightSensor } = useTheme()
+    startLightSensor()
+  },
   computed: {
     store() {
       return useGameStore();
@@ -17,6 +22,8 @@ export default {
     logged() {
       return this.store.logged;
     },
+    t: () => t,
+    lang() { return currentLanguage.value }
   },
   methods: {
     onLoginSuccess() {
@@ -40,18 +47,18 @@ export default {
   <main>
     <!-- Non connecté -->
     <div v-if="!logged">
-      <HelloWorld msg="Bienvenue, veuillez vous connecter" />
+      <HelloWorld msg="t('welcome')" />
       <Login message="Connexion" @login-success="onLoginSuccess" />
     </div>
 
     <!-- Connecté -->
     <div v-else>
-      <HelloWorld msg="Vous êtes connecté" />
+      <HelloWorld :msg="t('welcomeConnected')" />
       <nav class="nav-bar">
-        <RouterLink to="/">Accueil</RouterLink>
-        <RouterLink to="/map">Carte</RouterLink>
-        <RouterLink to="/profile">Profil</RouterLink>
-        <button @click="handleLogout">Se déconnecter</button>
+        <RouterLink to="/">{{ t('homeLink') }}</RouterLink>
+        <RouterLink to="/map">{{ t('mapLink') }}</RouterLink>
+        <RouterLink to="/profile">{{ t('profile') }}</RouterLink>
+        <button @click="handleLogout">{{ t('logout') }}</button>
       </nav>
       <hr />
       <RouterView />

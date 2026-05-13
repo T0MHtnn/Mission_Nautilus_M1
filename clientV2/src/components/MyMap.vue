@@ -1,20 +1,20 @@
 <template>
   <section class="map-container">
     <p class="content">
-      Joueurs : <strong>{{ store.players.length }}</strong> | Objets non
-      découverts : <strong>{{ store.undiscoveredObjects.length }}</strong> |
-      Objets découverts : <strong>{{ store.discoveredObjects.length }}</strong>
+      {{ t('players') }} : <strong>{{ store.players.length }}</strong> | 
+      {{ t('undiscovered') }} : <strong>{{ store.undiscoveredObjects.length }}</strong> |
+      {{ t('discovered') }} : <strong>{{ store.discoveredObjects.length }}</strong>
     </p>
 
     <div v-if="store.isLocating" class="gps-loading">
-      <h2>🌍 Recherche du signal GPS en cours...</h2>
-      <p>Veuillez patienter pendant que nous vous localisons.</p>
+      <h2>{{ t('gpsSearching') }}</h2>
+      <p>{{ t('gpsWait') }}</p>
     </div>
     
     <div v-else-if="store.locationError" class="gps-error">
-      <h2>❌ Erreur GPS : {{ store.locationError }}</h2>
-      <p>Vous devez autoriser la géolocalisation pour jouer.</p>
-      <button @click="store.startPolling()">Réessayer</button>
+      <h2>{{ t('gpsError') }} : {{ store.locationError }}</h2>
+  <p>{{ t('gpsAllow') }}</p>
+  <button @click="store.startPolling()">{{ t('gpsRetry') }}</button>
     </div>
 
     <div id="map" class="map" ref="map" v-show="!store.isLocating && !store.locationError"></div>
@@ -28,9 +28,9 @@
         <h1>{{ store.gameMessage.title }}</h1>
         <p>{{ store.gameMessage.body }}</p>
         <button v-if="!store.isGameOver" @click="store.closeGameMessage()">
-          Continuer
+          {{ t('continue') }}
         </button>
-        <button v-else @click="store.logout()" class="btn-quit">Quitter le jeu</button>
+        <button v-else @click="store.logout()" class="btn-quit">{{ t('quit') }}</button>
       </div>
     </div>
   </section>
@@ -48,6 +48,7 @@ import type {
 import { useGameStore } from "../stores/game";
 // @ts-ignore
 import createWaterOverlay from '../utils/waterOverlay.js';
+import { t, currentLanguage } from '../composables/usePreferences'
 
 // Coordonnées et zoom conservés entre montages
 const savedLat = 45.782;
@@ -117,6 +118,8 @@ export default {
     store() {
       return useGameStore();
     },
+    t: () => t,
+    lang() { return currentLanguage.value }
   },
   methods: {
     updateMap() {
@@ -182,8 +185,8 @@ export default {
         }).addTo(map);
         marker.bindPopup(
           `<strong>${player.id}</strong><br>` +
-            `Rôle : ${player.role}<br>` +
-            `Score : ${player.score}`,
+            `${t('role')} : ${player.role}<br>` +
+            `${t('score')} : ${player.score}`,
         );
         this.playerMarkers.push(marker);
       }
@@ -203,7 +206,7 @@ export default {
         let popupContent = "";
 
         if (obj.discovered) {
-          popupContent = `<strong>${obj.id}</strong><br>Type : ${obj.type}<br><em>Récupéré</em>`;
+          popupContent = `<strong>${obj.id}</strong><br>Type : ${obj.type}<br><em>${t('discovered')}</em>`;
         } else {
           const isMonster = ["creature", "monster"].includes(obj.type.toLowerCase());
           popupContent = `<strong>${isMonster ? '⚠️ Danger' : 'Objet Inconnu'}</strong><br>` +

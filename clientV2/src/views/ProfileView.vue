@@ -1,6 +1,8 @@
 <script lang="ts">
 import { useGameStore } from "../stores/game";
 import { useTheme } from '../composables/useTheme'
+import { usePreferences } from '../composables/usePreferences'
+import { t, currentLanguage } from '../composables/usePreferences'
 
 export default {
   name: "ProfileView",
@@ -12,12 +14,22 @@ export default {
       message: "",
       error: "",
       selectedTheme: localStorage.getItem('zanzibar_theme') || 'auto',
+      selectedFontSize: 'normal',
+      selectedLanguage: 'fr',
     };
+  },
+  mounted() {
+    const { getPreference } = usePreferences(this.store.login)
+    this.selectedTheme = getPreference('theme')
+    this.selectedFontSize = getPreference('fontSize')
+    this.selectedLanguage = getPreference('language')
   },
   computed: {
     store() {
       return useGameStore();
     },
+    t: () => t,
+    lang() { return currentLanguage.value }
   },
   methods: {
     async saveProfile() {
@@ -43,8 +55,16 @@ export default {
       }
     },
     handleThemeChange() {
-      const { applyTheme } = useTheme()
-      applyTheme(this.selectedTheme as 'light' | 'dark' | 'auto')
+      const { savePreference } = usePreferences(this.store.login)
+      savePreference('theme', this.selectedTheme as 'auto' | 'light' | 'dark')
+    },
+    handleFontSizeChange() {
+      const { savePreference } = usePreferences(this.store.login)
+      savePreference('fontSize', this.selectedFontSize as 'small' | 'normal' | 'large')
+    },
+    handleLanguageChange() {
+      const { savePreference } = usePreferences(this.store.login)
+      savePreference('language', this.selectedLanguage as 'fr' | 'en')
     },
   },
 };
@@ -52,16 +72,16 @@ export default {
 
 <template>
   <main>
-    <h1>Mon profil</h1>
+    <h1>{{ t('profileTitle') }}</h1>
 
     <div class="profile-form">
       <div class="field">
-        <label for="login">Utilisateur</label>
+        <label for="login">{{ t('profileUser') }}</label>
         <input type="text" id="login" :value="store.login" disabled />
       </div>
 
       <div class="field">
-        <label for="imageUrl">URL de l'image de profil</label>
+        <label for="imageUrl">{{ t('profileImageUrl') }}</label>
         <input
           type="url"
           id="imageUrl"
@@ -71,45 +91,63 @@ export default {
       </div>
 
       <div class="field">
-        <label for="newPassword">Nouveau mot de passe</label>
+        <label for="newPassword">{{ t('profileNewPassword') }}</label>
         <input
           type="password"
           id="newPassword"
           v-model="newPassword"
-          placeholder="Laisser vide pour ne pas changer"
+          :placeholder="t('profilePasswordPlaceholder')"
         />
       </div>
 
       <div class="field">
-        <label for="confirmPassword">Confirmer le mot de passe</label>
+        <label for="confirmPassword">{{ t('profileConfirmPassword') }}</label>
         <input type="password" id="confirmPassword" v-model="confirmPassword" />
       </div>
 
-      <button @click="saveProfile">Enregistrer</button>
+      <button @click="saveProfile">{{ t('profileSave') }}</button>
 
       <p v-if="message" class="success">{{ message }}</p>
       <p v-if="error" class="error">{{ error }}</p>
 
       <div class="field">
-        <label for="theme">Thème</label>
+        <label for="theme">{{ t('themeLabel') }}</label>
         <select id="theme" v-model="selectedTheme" @change="handleThemeChange">
-          <option value="auto">Automatique (luminosité)</option>
-          <option value="light">Clair</option>
-          <option value="dark">Sombre</option>
+          <option value="auto">{{ t('themeAuto') }}</option>
+          <option value="light">{{ t('themeLight') }}</option>
+          <option value="dark">{{ t('themeDark') }}</option>
         </select>
       </div>
+
+      <div class="field">
+        <label for="fontSize">{{ t('fontSizeLabel') }}</label>
+        <select id="fontSize" v-model="selectedFontSize" @change="handleFontSizeChange">
+          <option value="small">{{ t('fontSmall') }}</option>
+          <option value="normal">{{ t('fontNormal') }}</option>
+          <option value="large">{{ t('fontLarge') }}</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="language">{{ t('languageLabel') }}</label>
+        <select id="language" v-model="selectedLanguage" @change="handleLanguageChange">
+          <option value="fr">Français</option>
+          <option value="en">English</option>
+        </select>
+      </div>
+
     </div>
 
     <div class="stats">
-      <h2>Statistiques</h2>
+      <h2>{{ t('stats') }}</h2>
       <p>
-        Role : <strong>{{ store.localPlayer.role }}</strong>
+        {{ t('role') }} : <strong>{{ store.localPlayer.role }}</strong>
       </p>
       <p>
-        Score : <strong>{{ store.localPlayer.score }}</strong>
+        {{ t('score') }} : <strong>{{ store.localPlayer.score }}</strong>
       </p>
       <p>
-        Position :
+        {{ t('position') }} :
         <strong
           >{{ store.localPlayer.position[0].toFixed(5) }},
           {{ store.localPlayer.position[1].toFixed(5) }}</strong
