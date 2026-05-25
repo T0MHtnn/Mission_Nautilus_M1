@@ -2,6 +2,7 @@ import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import type { PlayerData, GameObject, ZRR } from "../mocks/gameData";
 import { mockLocalPlayer } from "../mocks/gameData";
+import { useNotifications } from '../composables/useNotifications'
 
 const targetPositions = ref(new Map<string, [number, number]>());
 let animationFrameId: number | null = null;
@@ -131,10 +132,16 @@ export const useGameStore = defineStore("game", () => {
       token.value = finalToken;
       localStorage.setItem("zanzibar_token", finalToken);
       localStorage.setItem("zanzibar_login", user);
+
       login.value = user;
       logged.value = true;
+
+      const { requestPermission } = useNotifications()
+      await requestPermission()
+
       localPlayer.value.id = user;
       localPlayer.value.role = "rival";
+
       // Réinitialiser complètement l'état du jeu pour une nouvelle session
       gameMessage.value = null;
       isGameOver.value = false;
@@ -523,13 +530,16 @@ export const useGameStore = defineStore("game", () => {
         };
         isGameOver.value = true;
         stopPolling();
+        const { sendNotification } = useNotifications()
+        sendNotification('💀 Game Over', errorMsg)
         return;
       }
 
       const data = await res.json();
 
       if (res.ok) {
-        // 2. Actionneur (vibreur)
+        const { sendNotification } = useNotifications()
+
         if ("vibrate" in navigator) {
           navigator.vibrate([200, 100, 200]);
         }
@@ -541,6 +551,9 @@ export const useGameStore = defineStore("game", () => {
           body: `Score : ${data.newScore}`,
           type: "success",
         };
+
+        //Notification
+        sendNotification('💎 Artefact Récupéré !', `Score : ${data.newScore}`)
       }
     } catch (e) {
       console.warn("Erreur réseau lors du traitement de l'objet", e);
