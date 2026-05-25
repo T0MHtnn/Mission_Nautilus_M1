@@ -13,6 +13,7 @@ export interface PlayerData {
 export interface GameObject {
   id: string;
   position: [number, number];
+  serverPosition?: [number, number]
   type: string;
   ttl: number; // secondes restantes
   discovered: boolean;

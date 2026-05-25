@@ -4,8 +4,9 @@ import type { PlayerData, GameObject, ZRR } from "../mocks/gameData";
 import { mockLocalPlayer } from "../mocks/gameData";
 import { useNotifications } from '../composables/useNotifications'
 
-const targetPositions = ref(new Map<string, [number, number]>());
 let animationFrameId: number | null = null;
+const targetPositions = ref(new Map<string, [number, number]>());
+
 const API_BASE = import.meta.env.VITE_API_TARGET || "http://localhost:3376";
 const AUTH_BASE =
   import.meta.env.VITE_AUTH_TARGET || "http://localhost:8080/auth";
@@ -112,16 +113,16 @@ export const useGameStore = defineStore("game", () => {
         return { success: false, error: "Aucun token reçu du serveur" };
       }
 
-      // Vérifier que l'utilisateur est un rival
+      // Vérifier que l'utilisateur est un explorateur
       const parts = finalToken.split(".");
       if (parts.length >= 2) {
         try {
           const payload = JSON.parse(atob(parts[1]!));
           const species = (payload.species || "").toLowerCase();
-          if (species !== "rival") {
+          if (species !== "explorateur") {
             return {
               success: false,
-              error: "Seuls les rivaux peuvent se connecter",
+              error: "Seuls les explorateurs peuvent se connecter",
             };
           }
         } catch {
@@ -136,11 +137,13 @@ export const useGameStore = defineStore("game", () => {
       login.value = user;
       logged.value = true;
 
-      const { requestPermission } = useNotifications()
+      const { requestPermission, subscribeToPush } = useNotifications()
       await requestPermission()
+      await subscribeToPush()
+
 
       localPlayer.value.id = user;
-      localPlayer.value.role = "rival";
+      localPlayer.value.role = "explorateur";
 
       // Réinitialiser complètement l'état du jeu pour une nouvelle session
       gameMessage.value = null;
@@ -378,14 +381,15 @@ export const useGameStore = defineStore("game", () => {
         const me = resData.players?.find((p: PlayerData) => p.id === login.value);
         if (me) localPlayer.value.score = me.score;
 
-        const existingMap = new Map(objects.value.map(o => [o.id, o]))
         const apiObjects = [...(resData.objects || []), ...(resData.processedObjects || [])]
 
         objects.value = apiObjects.map(newObj => {
-          const existingObj = existingMap.get(newObj.id)
-          const currentPos = existingObj ? existingObj.position : (newObj.position || [0, 0])
           const isProcessed = resData.processedObjects?.some(p => p.id === newObj.id) ?? false
-          return { ...newObj, position: currentPos, discovered: isProcessed } as GameObject
+          return {
+            ...newObj,
+            position: newObj.position || [0, 0],
+            discovered: isProcessed
+          } as GameObject
         })
 
         objects.value.forEach(obj => {
@@ -426,7 +430,7 @@ export const useGameStore = defineStore("game", () => {
   }
 
   function animateObjects() {
-    const step = 0.005;
+    const step = 0.0003;
     const tolerance = 0.00001;
     let hasChanges = false;
 
@@ -503,17 +507,20 @@ export const useGameStore = defineStore("game", () => {
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   }
 
+  const processingObjects = new Set<string>()
+
   /** Vérifier la proximité avec les objets (< 5m) */
   async function checkProximity() {
     const pos = localPlayer.value.position;
     for (const obj of objects.value) {
       if (obj.discovered) continue;
+      if (processingObjects.has(obj.id)) continue;
       const dist = distanceMeters(pos, obj.position);
       if (dist < 5) {
-        const isCreature = ['creature', 'monster', 'monstre'].includes(obj.type.toLowerCase())
-        obj.discovered = !isCreature
+        processingObjects.add(obj.id);
         console.log(`🎯 Contact avec un objet de type: ${obj.type}`);
         await processObject(obj.id);
+        processingObjects.delete(obj.id);
       }
     }
   }
@@ -549,6 +556,9 @@ export const useGameStore = defineStore("game", () => {
       const data = await res.json();
 
       if (res.ok) {
+        const obj = objects.value.find(o => o.id === objectId);
+        if (obj) obj.discovered = true;
+
         const { sendNotification } = useNotifications()
 
         if ("vibrate" in navigator) {

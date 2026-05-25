@@ -45,3 +45,21 @@ self.addEventListener('fetch', event => {
         );
     }
 });
+
+// Réception des notifications push serveur
+self.addEventListener('push', event => {
+    const data = event.data ? event.data.json() : {};
+    const title = data.title || 'Zanzibar Mobile';
+    const options = {
+        body: data.body || 'Un événement vient de se produire !',
+        icon: data.icon || '/icons/icon-192.png',
+        badge: '/icons/icon-192.png'
+    };
+    event.waitUntil(self.registration.showNotification(title, options));
+});
+
+// Clic sur la notification
+self.addEventListener('notificationclick', event => {
+    event.notification.close();
+    event.waitUntil(clients.openWindow('/'));
+});

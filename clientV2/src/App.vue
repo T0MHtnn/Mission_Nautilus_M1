@@ -80,32 +80,33 @@ header {
 }
 
 .nav-bar a {
-  color: #42b883;
+  color: #3C473F;
   text-decoration: none;
   font-weight: bold;
 }
 
 .nav-bar a.router-link-active {
+  color: #3C473F;
   text-decoration: underline;
 }
 
 .user-info {
   font-size: 1rem;
   font-weight: bold;
-  color: #42b883;
+  color: #3C473F;
 }
 
 button {
   cursor: pointer;
   padding: 8px 15px;
-  background: #42b883;
-  color: white;
+  background: #3C473F;
+  color: #dfcba2;
   border: none;
   border-radius: 4px;
 }
 
 button:hover {
-  background: #33a06f;
+  background: #535C4A;
 }
 
 </style>

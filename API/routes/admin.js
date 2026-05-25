@@ -2,8 +2,16 @@ import express from 'express';
 import { gameState } from '../models/data.js';
 import { eventLogger } from '../utils/logger.js';
 import { validateToken, requireAdmin } from '../utils/auth.js';
+import webpush from 'web-push';
+import { pushSubscriptions } from '../models/data.js';
 
 const router = express.Router();
+
+webpush.setVapidDetails(
+	'mailto:admin@zanzibar.com',
+	'BKr5FQlZ4renFe3h1ekKUGzpmHjN7kEgyurP9L_8Xfg5wX-YaJUDqBR53wAnZ0uMJOktbWkYnMaBu8U_l0PMWa8',
+	'L4rG5TdgHXXy4xa_DmZdB7g5w3cBWgdIxg1M6osADEc'
+);
 
 /**
  * 1. POST /admin/zrr
@@ -142,6 +150,18 @@ router.post('/spawn-object', validateToken, requireAdmin, (req, res) => {
 		};
 
 		gameState.objects.push(newObj);
+
+		const payload = JSON.stringify({
+			title: '🎯 Nouvel objet apparu !',
+			body: `Un ${type} vient d'apparaître sur la carte !`,
+			icon: '/icons/icon-192.png'
+		});
+
+		pushSubscriptions.forEach(sub => {
+			webpush.sendNotification(sub, payload).catch(err => {
+				console.error('Erreur push:', err);
+			});
+		});
 
 		eventLogger.info(`Admin a créé l'objet ${newObj.id} (${newObj.type}) en [${position[0]}, ${position[1]}] avec TTL=${newObj.ttl}s`);
 

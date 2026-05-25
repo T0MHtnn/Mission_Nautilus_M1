@@ -15,7 +15,7 @@ const defaultPrefs: Preferences = {
 export const translations = {
     fr: {
         welcome: 'Bienvenue sur Zanzibar Mobile',
-        welcomeConnected: 'Vous êtes connecté - Interface Rival',
+        welcomeConnected: 'Vous êtes connecté - Interface Explorateur',
         connectPrompt: 'Connectez-vous pour commencer à jouer.',
         map: 'Carte Zanzibar',
         profile: 'Mon profil',
@@ -63,7 +63,7 @@ export const translations = {
     },
     en: {
         welcome: 'Welcome to Zanzibar Mobile',
-        welcomeConnected: 'Connected - Rival Interface',
+        welcomeConnected: 'Connected - Explorer Interface',
         connectPrompt: 'Log in to start playing.',
         map: 'Zanzibar Map',
         profile: 'My profile',

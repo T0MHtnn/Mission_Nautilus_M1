@@ -447,9 +447,7 @@ export const useGameStore = defineStore("game", () => {
       if (obj.discovered) continue;
       const dist = distanceMeters(pos, obj.position);
       if (dist < 5) {
-        obj.discovered = true;
         console.log(`🎯 Contact avec un objet de type: ${obj.type}`);
-        await sendPosition();
         await processObject(obj.id);
       }
     }
@@ -488,7 +486,9 @@ export const useGameStore = defineStore("game", () => {
       const data = await res.json();
 
       if (res.ok) {
-        // 2. Actionneur (vibreur)
+        const obj = objects.value.find(o => o.id === objectId);
+        if (obj) obj.discovered = true;
+        // Actionneur (vibreur)
         if ("vibrate" in navigator) {
           navigator.vibrate([200, 100, 200]);
         }

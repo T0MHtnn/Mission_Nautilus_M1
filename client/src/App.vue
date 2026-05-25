@@ -42,7 +42,7 @@ export default {
 
     <!-- Connecté -->
     <div v-else>
-      <HelloWorld msg="Vous êtes connecté" />
+      <HelloWorld msg="Vous êtes connecté - Interface Rival" />
       <nav class="nav-bar">
         <RouterLink to="/">Accueil</RouterLink>
         <RouterLink to="/map">Carte</RouterLink>

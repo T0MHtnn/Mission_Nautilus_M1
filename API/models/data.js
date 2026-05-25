@@ -9,3 +9,4 @@ export const gameState = {
 	},
 	defaultTTL: 60 // 1 minute par défaut
 };
+export const pushSubscriptions = [];

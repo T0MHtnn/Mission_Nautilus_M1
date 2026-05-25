@@ -3,6 +3,7 @@ import { gameState } from '../models/data.js';
 import { calculateDistance } from '../utils/geo.js';
 import { eventLogger } from '../utils/logger.js';
 import { validateToken } from '../utils/auth.js';
+import { pushSubscriptions } from '../models/data.js';
 
 const router = express.Router();
 
@@ -121,6 +122,27 @@ router.post('/position', validateToken, (req, res) => {
 					ttl: Math.max(0, obj.ttl - elapsed)
 				};
 			});
+
+		const now = Date.now();
+		gameState.objects.forEach(obj => {
+			const typeLower = obj.type.toLowerCase();
+			if (['creature', 'monster', 'monstre'].includes(typeLower)) {
+				// Initialiser ou changer la cible si on est arrivé dessus
+				if (!obj.targetPosition || calculateDistance(obj.position, obj.targetPosition) < 3) {
+					obj.targetPosition = [
+						obj.position[0] + (Math.random() - 0.5) * 0.0004,
+						obj.position[1] + (Math.random() - 0.5) * 0.0004
+					];
+				}
+				// Déplacer vers la cible
+				const step = 0.05;
+				obj.position = [
+					obj.position[0] + (obj.targetPosition[0] - obj.position[0]) * step,
+					obj.position[1] + (obj.targetPosition[1] - obj.position[1]) * step
+				];
+			}
+		});
+
 
 		res.json({
 			players: visiblePlayers,
@@ -493,6 +515,20 @@ router.put('/profile', validateToken, async (req, res) => {
 		eventLogger.error(`Erreur mise à jour profil: ${error.message}`);
 		res.status(500).json({ error: "Erreur serveur" });
 	}
+});
+
+/**
+ * POST /game/subscribe
+ * Enregistre une souscription Push pour les notifications Web Push
+ * Si la souscription existe déjà (même endpoint), elle n'est pas dupliquée
+ */
+router.post('/subscribe', validateToken, (req, res) => {
+	const subscription = req.body;
+	const exists = pushSubscriptions.find(s => s.endpoint === subscription.endpoint);
+	if (!exists) {
+		pushSubscriptions.push(subscription);
+	}
+	res.json({ success: true });
 });
 
 export default router;
