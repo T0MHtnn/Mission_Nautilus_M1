@@ -47,7 +47,7 @@ export default {
   <main>
     <!-- Non connecté -->
     <div v-if="!logged">
-      <HelloWorld msg="t('welcome')" />
+      <HelloWorld :msg="t('welcome')" />
       <Login message="Connexion" @login-success="onLoginSuccess" />
     </div>
 
@@ -55,7 +55,6 @@ export default {
     <div v-else>
       <HelloWorld :msg="t('welcomeConnected')" />
       <nav class="nav-bar">
-        <RouterLink to="/">{{ t('homeLink') }}</RouterLink>
         <RouterLink to="/map">{{ t('mapLink') }}</RouterLink>
         <RouterLink to="/profile">{{ t('profile') }}</RouterLink>
         <button @click="handleLogout">{{ t('logout') }}</button>
@@ -87,8 +86,15 @@ header {
   text-decoration: none;
   font-weight: bold;
 }
+
 .nav-bar a.router-link-active {
   text-decoration: underline;
+}
+
+.user-info {
+  font-size: 1rem;
+  font-weight: bold;
+  color: #42b883;
 }
 
 button {
@@ -99,7 +105,9 @@ button {
   border: none;
   border-radius: 4px;
 }
+
 button:hover {
   background: #33a06f;
 }
+
 </style>

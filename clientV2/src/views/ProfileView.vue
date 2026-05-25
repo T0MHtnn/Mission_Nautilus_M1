@@ -54,6 +54,7 @@ export default {
         this.error = "Erreur lors de la mise à jour du profil";
       }
     },
+    
     handleThemeChange() {
       const { savePreference } = usePreferences(this.store.login)
       savePreference('theme', this.selectedTheme as 'auto' | 'light' | 'dark')

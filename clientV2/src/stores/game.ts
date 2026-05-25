@@ -225,15 +225,15 @@ export const useGameStore = defineStore("game", () => {
           const rawLat = position.coords.latitude;
           const rawLon = position.coords.longitude;
 
-          // 1.3 Correction des erreurs de capteurs
+          // Correction des erreurs de capteurs
           const lat = rawLat + calibrationVector.value[0];
           const lon = rawLon + calibrationVector.value[1];
 
-          // 1.4 Direction des joueurs (Calcul basique si la boussole n'est pas fournie ou gérée par le navigateur)
+          // Direction des joueurs
           if (position.coords.heading !== null && !isNaN(position.coords.heading)) {
             heading.value = position.coords.heading;
           } else if (lastRawPosition.value) {
-            // Calcul basier (Bearing) entre deux points si heading n'est pas dispo
+            // Calcul basier entre deux points si heading n'est pas dispo
             const lat1 = lastRawPosition.value[0] * Math.PI / 180;
             const lon1 = lastRawPosition.value[1] * Math.PI / 180;
             const lat2 = rawLat * Math.PI / 180;
@@ -353,7 +353,18 @@ export const useGameStore = defineStore("game", () => {
       performance.mark('start-game-logic');
       console.log("📡 [STORE] Statut réponse ZRR:", zrrRes.status);
 
-      if (posRes.ok) {
+      if (posRes.status === 403) {
+        let errorData: any = {};
+        try { errorData = await posRes.json(); } catch { }
+        if (errorData.type === 'death') {
+          const { sendNotification } = useNotifications()
+          const msg = errorData.error || "Vous avez été dévoré !"
+          gameMessage.value = { title: "💀 GAME OVER", body: msg, type: "error" }
+          isGameOver.value = true
+          stopPolling()
+          sendNotification('💀 Game Over', msg)
+        }
+      } else if (posRes.ok) {
         const posData = await posRes.json();
         if (posData.players) {
           players.value = posData.players.filter((p: PlayerData) => p.role !== 'rival');
@@ -460,13 +471,17 @@ export const useGameStore = defineStore("game", () => {
         }),
       });
       if (res.status === 403) {
-        gameMessage.value = {
-          title: "💀 GAME OVER",
-          body: "Une créature vous a intercepté !",
-          type: "error",
-        };
-        isGameOver.value = true;
-        stopPolling();
+        let errorData: any = {};
+        try { errorData = await res.json(); } catch { }
+        if (errorData.type === 'death') {
+          gameMessage.value = {
+            title: "💀 GAME OVER",
+            body: errorData.error || "Une créature vous a intercepté !",
+            type: "error",
+          };
+          isGameOver.value = true;
+          stopPolling();
+        }
       }
     } catch (e) {
       console.warn("Erreur envoi position:", e);
@@ -495,9 +510,9 @@ export const useGameStore = defineStore("game", () => {
       if (obj.discovered) continue;
       const dist = distanceMeters(pos, obj.position);
       if (dist < 5) {
-        obj.discovered = true;
+        const isCreature = ['creature', 'monster', 'monstre'].includes(obj.type.toLowerCase())
+        obj.discovered = !isCreature
         console.log(`🎯 Contact avec un objet de type: ${obj.type}`);
-        await sendPosition();
         await processObject(obj.id);
       }
     }
@@ -515,23 +530,19 @@ export const useGameStore = defineStore("game", () => {
       });
 
       if (res.status === 403) {
+
         // Cas Monstre
-        let errorMsg = "Vous avez été éliminé par une créature.";
-        try {
-          const data = await res.json();
-          errorMsg = data.error || errorMsg;
-        } catch {
-          /* ignore JSON error */
+        let errorData: any = {};
+        try { errorData = await res.json(); } catch { }
+        if (errorData.type === 'death') {
+          const errorMsg = errorData.error || "Vous avez été éliminé par une créature.";
+          gameMessage.value = { title: "💀 GAME OVER", body: errorMsg, type: "error" };
+          isGameOver.value = true;
+          stopPolling();
+          const { sendNotification } = useNotifications()
+          sendNotification('💀 Game Over', errorMsg)
         }
-        gameMessage.value = {
-          title: "💀 GAME OVER",
-          body: errorMsg,
-          type: "error",
-        };
-        isGameOver.value = true;
-        stopPolling();
-        const { sendNotification } = useNotifications()
-        sendNotification('💀 Game Over', errorMsg)
+        // Sinon ("trop loin", etc.) on ignore silencieusement
         return;
       }
 
@@ -576,7 +587,7 @@ export const useGameStore = defineStore("game", () => {
     }
   }
 
-  /** 1.3 Correction: Etalonnage et mise à jour du vecteur de calibration */
+  /** Correction: Etalonnage et mise à jour du vecteur de calibration */
   function calibratePosition(targetLat: number, targetLng: number) {
     if (!lastRawPosition.value) return;
     calibrationVector.value = [

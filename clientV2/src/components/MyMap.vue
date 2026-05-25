@@ -30,6 +30,12 @@
         <button v-if="!store.isGameOver" @click="store.closeGameMessage()">
           {{ t('continue') }}
         </button>
+        <button 
+          v-if="store.gameMessage.type === 'success'"
+          @click="shareScore"
+          class="btn-share">
+          🔗 Partager mon score
+        </button>
         <button v-else @click="store.logout()" class="btn-quit">{{ t('quit') }}</button>
       </div>
     </div>
@@ -298,6 +304,32 @@ export default {
         this.uncertaintyCircles.push(circle);
       }
     },
+    async shareScore() {
+      const score = this.store.localPlayer.score
+      const text = `Mission Zanzibar - J'ai un score de ${score} points ! Peux-tu faire mieux ? #ZanzibarMobile`
+
+      // Feature detection Web Share API
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: 'Zanzibar Mobile',
+            text,
+            url: window.location.href
+          })
+        } catch (e) {
+          // L'utilisateur a annulé le partage
+        }
+      } else {
+        // Fallback : télécharger un fichier texte
+        const blob = new Blob([text], { type: 'text/plain' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = 'zanzibar-score.txt'
+        a.click()
+        URL.revokeObjectURL(url)
+      }
+    },
   },
 
   async mounted() {
@@ -373,10 +405,10 @@ export default {
       if (this.map) {
         this.map.invalidateSize();
         console.debug("✅ Carte recalculée et affichée");
+        this.waterOverlay = createWaterOverlay(this.map, { bubbleCount: 60, bubbleMinR: 2, bubbleMaxR: 8 });
       }
-    }, 200);
+    }, 500);
 
-    this.waterOverlay = createWaterOverlay(this.map, { bubbleCount: 60, bubbleMinR: 2, bubbleMaxR: 8 });
 
     // Premier affichage
     this.refreshAll();
@@ -429,9 +461,10 @@ export default {
 
 <style scoped>
 .map-container {
+  position: relative;
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 100px); /* Occupe la hauteur de l'écran moins le header/nav potentiel */
+  height: calc(100vh - 160px); /* Occupe la hauteur de l'écran moins le header/nav potentiel */
   width: 100%;
 }
 
@@ -475,11 +508,6 @@ export default {
   border: none;
   border-radius: 5px;
   cursor: pointer;
-}
-
-.map-container {
-  position: relative;
-  width: 100%;
 }
 
 .game-overlay {
@@ -531,5 +559,10 @@ export default {
 
 .modal button.btn-quit {
   background: #666;
+}
+
+.btn-share {
+  background: #3498db;
+  margin-top: 0.5rem;
 }
 </style>

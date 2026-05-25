@@ -7,12 +7,17 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/purecss@3.0.0/build/pure-min.css"
         integrity="sha384-X38yfunGUhNzHpBaEBsWLO+A0HDYOQi8ufWDkZ0k9e0eXz/tH3II7uKZ9msv++Ls" crossorigin="anonymous">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
 </head>
 
 <body class="b">
     <header>
         <h1>Mission Nautilus</h1>
-        <h1 class="elanor">Confidentiel</span></h1>
+        <h1 class="elanor">Confidentiel</h1>
+        <br>
+        <button id="logoutButton" class="pure-button" style="float: right; margin-top: -40px;">Se déconnecter</button>
     </header>
 
     <section>
@@ -68,6 +73,9 @@
             <select id="playerLogin">
                 <option value="">-- Sélectionner un agent --</option>
             </select>
+            <button id="refreshPlayersButton" title="Actualiser la liste des agents" class="btn-refresh">
+                ↻ Actualiser
+            </button>
             <label>Affectation :</label>
             <select id="playerRole">
                 <option value="explorateur">Explorateur</option>

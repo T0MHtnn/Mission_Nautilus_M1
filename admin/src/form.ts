@@ -179,7 +179,7 @@ async function fetchPlayersList() {
 export function initAdminRoutesListeners(): void {
     fetchPlayersList();
 
-    // --- 1. CONNEXION / LOGIN ---
+    // --- CONNEXION / LOGIN ---
     const btnLogin = document.getElementById("loginButton");
     if (btnLogin) {
         btnLogin.addEventListener("click", async () => {
@@ -188,7 +188,6 @@ export function initAdminRoutesListeners(): void {
 
             try {
                 // On appelle le JAR Java (via le proxy ou direct si CORS ok)
-                // Note: Si tu as configuré un proxy /auth sur ton admin, utilise '/auth/login'
                 const response = await fetch("http://localhost:8080/auth/login", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -200,8 +199,6 @@ export function initAdminRoutesListeners(): void {
 
                     // On stocke le VRAI JWT
                     setToken(data.token);
-
-                    alert("Connexion réussie ! Token JWT récupéré.");
 
                     // On quitte la page de login immédiatement pour charger l'index
                     window.location.href = "index.html";
@@ -215,7 +212,22 @@ export function initAdminRoutesListeners(): void {
         });
     }
 
-    // --- 2. ASSIGNER UN RÔLE ---
+    // --- DÉCONNEXION / LOGOUT ---
+    const btnLogout = document.getElementById("logoutButton");
+    if (btnLogout) {
+        btnLogout.addEventListener("click", () => {
+            localStorage.removeItem('admin_token');
+            window.location.href = 'login.html';
+        });
+    }
+
+    // --- REFRESH ---
+    const btnRefreshPlayers = document.getElementById("refreshPlayersButton");
+    if (btnRefreshPlayers) {
+        btnRefreshPlayers.addEventListener("click", fetchPlayersList);
+    }
+
+    // --- ASSIGNER UN RÔLE ---
     const btnSetRole = document.getElementById("setRoleButton");
     if (btnSetRole) {
         btnSetRole.addEventListener("click", () => {
@@ -230,7 +242,7 @@ export function initAdminRoutesListeners(): void {
         });
     }
 
-    // --- 3. SPAWN OBJET ---
+    // --- SPAWN OBJET ---
     const btnSpawn = document.getElementById("spawnObjectButton");
     if (btnSpawn) {
         btnSpawn.addEventListener("click", () => {
@@ -246,7 +258,7 @@ export function initAdminRoutesListeners(): void {
         });
     }
 
-    // --- 4. ACTUALISER LE STATUT ---
+    // --- ACTUALISER LE STATUT ---
     const btnStatus = document.getElementById("refreshStatusButton");
     if (btnStatus) {
         btnStatus.addEventListener("click", updateStatus);

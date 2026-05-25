@@ -44,7 +44,7 @@ if (btnLogin) {
 
                         setToken(cleanToken);
                         alert("Connexion réussie !");
-                        window.location.href = "index.html";
+                        window.location.replace("index.html");
                     } catch (e) {
                         alert("Erreur lors du décodage du token.");
                         console.error(e);

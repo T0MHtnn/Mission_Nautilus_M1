@@ -41,9 +41,6 @@ function initMap() {
         zoomOffset: -1
     }).addTo(mymap);
 
-    // Ajout d'un marker
-    L.marker([45.78207, 4.86559]).addTo(mymap).bindPopup('Entrée du bâtiment<br>Nautibus.').openPopup();
-
     // Clic sur la carte
     mymap.on('click', (e: L.LeafletMouseEvent) => {
         updateMap(e.latlng, mymap.getZoom());

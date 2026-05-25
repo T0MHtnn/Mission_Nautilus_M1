@@ -3,8 +3,13 @@
     "allowSyntheticDefaultImports": true,
     "noImplicitAny": true,
     "module": "es6",
-    "target": "es5",
+    "target": "es2015",
     "allowJs": true
   },
-  "files": ["src/index.ts"]
+  "files": [
+    "src/index.ts"
+  ],
+  "include": [
+    "src/**/*"
+  ]
 }

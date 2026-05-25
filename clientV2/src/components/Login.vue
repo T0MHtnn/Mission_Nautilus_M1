@@ -53,7 +53,8 @@ export default {
 <style scoped>
 .login-form {
   padding: 2rem;
-  background: #f0f0f0;
+  background: var(--color-background-soft);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   margin: 20px auto;
   max-width: 400px;

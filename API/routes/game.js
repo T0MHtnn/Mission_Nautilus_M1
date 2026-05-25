@@ -38,7 +38,7 @@ const isInsideZRR = (position, zrrLimits) => {
 };
 
 /**
- * 1. POST /game/position
+ * POST /game/position
  * Mise à jour de la position du joueur
  * Body: { login: string, position: [lat, lon] }
  */
@@ -60,7 +60,7 @@ router.post('/position', validateToken, (req, res) => {
 		}
 
 		let user = gameState.players[login];
-		if (user.isDead) return res.status(403).json({ error: "Vous êtes mort." });
+		if (user.isDead) return res.status(403).json({ error: "Vous êtes mort.", type: "death" });
 		user.position = position;
 
 		const currentTime = Date.now();
@@ -136,7 +136,7 @@ router.post('/position', validateToken, (req, res) => {
 });
 
 /**
- * 2. GET /game/resources
+ * GET /game/resources
  * Récupère la liste des ressources géolocalisées
  * Query: { login: string }
  * 
@@ -155,7 +155,7 @@ router.get('/resources', validateToken, (req, res) => {
 			if (role === 'admin' || role === 'administrator') {
 				user = {
 					role: 'admin',
-					position: [45.782, 4.8656], // Position par défaut (ex: Lyon)
+					position: [45.782, 4.8656], // Position par défaut
 					score: 0
 				};
 			} else {
@@ -247,7 +247,7 @@ router.get('/resources', validateToken, (req, res) => {
 });
 
 /**
- * 3. POST /game/process-object
+ * POST /game/process-object
  * Traite un objet (doit être à moins de 5m)
  * Body: { login: string, objectId: string }
  */
@@ -277,25 +277,26 @@ router.post('/process-object', validateToken, (req, res) => {
 
 		console.log(`🎯 [PROCESS] ${login} tente de traiter ${obj.type} à ${distance.toFixed(2)}m`);
 
-		// Vérifier la distance
+		const typeLower = obj.type.toLowerCase();
+
+		// Créature : mort immédiate sans vérification de distance
+		if (['creature', 'monster', 'monstre'].includes(typeLower)) {
+			console.log(`💀 [DEATH] ${login} a touché une créature !`);
+			user.isDead = true;
+			return res.status(403).json({
+				success: false,
+				error: "Vous avez été dévoré par une créature !",
+				type: "death"
+			});
+		}
+
+		// Artefact : vérifier la distance
 		if (distance > maxDistance) {
 			eventLogger.warn(`${login} a tenté de traiter ${objectId} à ${distance.toFixed(2)}m (trop loin)`);
 			return res.status(403).json({
 				error: "Trop loin pour collecter",
 				distance: distance.toFixed(2),
 				maxAutorisee: maxDistance
-			});
-		}
-
-		const typeLower = obj.type.toLowerCase();
-		if (['creature', 'monster', 'monstre'].includes(typeLower)) {
-			console.log(`💀 [DEATH] ${login} a touché une créature !`);
-			user.isDead = true;
-
-			return res.status(403).json({
-				success: false,
-				error: "Vous avez été dévoré par une créature !",
-				type: "death"
 			});
 		}
 
@@ -328,7 +329,7 @@ router.post('/process-object', validateToken, (req, res) => {
 });
 
 /**
- * 4. POST /game/capture-rival
+ * POST /game/capture-rival
  * Capture un rival (explorateur seulement, doit être à moins de 5m)
  * Body: { login: string, rivalId: string }
  */
@@ -390,7 +391,7 @@ router.post('/capture-rival', validateToken, (req, res) => {
 });
 
 /**
- * 5. GET /game/zrr
+ * GET /game/zrr
  * Récupère les limites de la Zone de Recherche et Récupération (ZRR)
  */
 router.get('/zrr', validateToken, (req, res) => {
@@ -418,7 +419,7 @@ router.get('/zrr', validateToken, (req, res) => {
 });
 
 /**
- * 5. POST /game/logout
+ * POST /game/logout
  * Supprime le joueur de la session (sans toucher au store du client)
  */
 router.post('/logout', validateToken, (req, res) => {
@@ -431,6 +432,65 @@ router.post('/logout', validateToken, (req, res) => {
 		res.json({ success: true });
 	} catch (error) {
 		eventLogger.error(`Erreur logout: ${error.message}`);
+		res.status(500).json({ error: "Erreur serveur" });
+	}
+});
+
+
+/**
+ * PUT /game/profile
+ * Met à jour le profil du joueur (password, imageUrl)
+ */
+router.put('/profile', validateToken, async (req, res) => {
+	try {
+		const login = req.user.login;
+		const { password, imageUrl } = req.body;
+
+		// Récupérer les données actuelles de l'utilisateur
+		const getRes = await fetch(`http://localhost:8080/users/${login}`, {
+			headers: {
+				'Authorization': req.headers.authorization,
+				'Origin': 'http://localhost:5173'
+			}
+		});
+
+		if (!getRes.ok) {
+			return res.status(404).json({ error: "Utilisateur non trouvé" });
+		}
+
+		const userData = await getRes.json();
+		console.log('userData:', userData);
+
+		// Mettre à jour uniquement les champs fournis
+		const updatedUser = {
+			...userData,
+			password: password || userData.password,
+			image: imageUrl || userData.image,
+		};
+
+		const putRes = await fetch(`http://localhost:8080/users/${login}`, {
+			method: 'PUT',
+			headers: {
+				'Content-Type': 'application/json',
+				'Authorization': req.headers.authorization,
+				'Origin': 'http://localhost:5173'
+			},
+			body: JSON.stringify(updatedUser)
+		});
+
+		if (!putRes.ok) {
+			return res.status(400).json({ error: "Erreur lors de la mise à jour du profil" });
+		}
+
+		if (imageUrl && gameState.players[login]) {
+			gameState.players[login].imageUrl = imageUrl;
+		}
+
+		eventLogger.info(`${login} a mis à jour son profil`);
+		res.json({ success: true });
+
+	} catch (error) {
+		eventLogger.error(`Erreur mise à jour profil: ${error.message}`);
 		res.status(500).json({ error: "Erreur serveur" });
 	}
 });
