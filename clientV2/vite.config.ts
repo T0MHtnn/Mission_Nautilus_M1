@@ -16,6 +16,9 @@ export default defineConfig(({ mode }) => {
       compression({ algorithm: 'brotliCompress', ext: '.br' }),
       VitePWA({
         registerType: 'autoUpdate',
+        strategies: 'injectManifest',
+        srcDir: 'public',
+        filename: 'sw.js',
         devOptions: {
           enabled: true
         },
