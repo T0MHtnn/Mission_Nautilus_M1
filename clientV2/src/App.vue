@@ -59,7 +59,6 @@ export default {
         <RouterLink to="/profile">{{ t('profile') }}</RouterLink>
         <button @click="handleLogout">{{ t('logout') }}</button>
       </nav>
-      <hr />
       <RouterView />
     </div>
   </main>
@@ -68,7 +67,6 @@ export default {
 <style scoped>
 header {
   padding: 1rem;
-  border-bottom: 1px solid #ccc;
   display: flex;
   justify-content: space-between;
   align-items: center;

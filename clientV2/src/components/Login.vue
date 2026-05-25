@@ -3,10 +3,10 @@
     <h2>{{ t('login') }}</h2>
 
     <label for="login">{{ t('username') }} :&nbsp;</label>
-    <input type="text" name="login" id="login" v-model="loginInput" />
+    <input type="text" placeholder="Login" name="login" id="login" v-model="loginInput" />
     <br />
     <label for="password">{{ t('password') }} :&nbsp;</label>
-    <input type="password" name="password" id="password" v-model="password" />
+    <input type="password" placeholder="Mot de passe" name="password" id="password" v-model="password" />
     <br />
     <button @click="login">{{ t('loginButton') }}</button>
     <p v-if="error" class="error">{{ error }}</p>
@@ -53,12 +53,63 @@ export default {
 <style scoped>
 .login-form {
   padding: 2rem;
-  background: var(--color-background-soft);
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
+  background: rgba(60, 71, 63, 0.85);
+  border: 1px solid rgba(83, 92, 74, 0.5);
+  border-radius: 20px;
   margin: 20px auto;
   max-width: 400px;
   text-align: center;
+}
+
+h2 {
+  color: #dfcba2;
+  font-family: _h2_;
+  font-size: 1.8em;
+  margin-bottom: 1rem;
+}
+
+.field {
+  margin-bottom: 12px;
+  text-align: left;
+}
+
+.field label {
+  display: block;
+  margin-bottom: 4px;
+  color: #dfcba2;
+  font-weight: bold;
+}
+
+.field input {
+  width: 100%;
+  padding: 8px;
+  background: #dfcba2;
+  border: 1px solid #535C4A;
+  border-radius: 5px;
+  color: darkslategrey;
+  box-sizing: border-box;
+}
+
+button {
+  width: 100%;
+  padding: 10px;
+  margin-top: 10px;
+  background: #535C4A;
+  color: #dfcba2;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background 0.2s;
+}
+
+button:hover {
+  background: #3C473F;
+}
+
+.error {
+  color: #ff6b6b;
+  margin-top: 10px;
 }
 
 input,
@@ -71,8 +122,4 @@ select {
   border-radius: 4px;
 }
 
-.error {
-  color: red;
-  margin-top: 10px;
-}
 </style>

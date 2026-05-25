@@ -3,23 +3,30 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Zanzibar - Connexion Admin</title>
+    <title>Zanzibar - Admin</title>
 </head>
 
 <body class="b">
-    <h1 class="elanor">Zanzibar</h1>
+    <header>
+        <h1>Zanzibar Mobile</h1>
+    </header>
 
-    <section style="max-width: 400px; margin: 50px auto;">
-        <h2>Administration</h2>
-        <div class="content">
-            <h1 class="pwd">Identifiez-vous</h1>
-            <input type="text" id="adminLogin" placeholder="Login" class="first">
-            <br>
-            <input type="password" id="adminPassword" placeholder="Mot de passe">
-            <br>
+    <main>
+        <h1 class="subtitle">Bienvenue sur Zanzibar Mobile - Interface Admin</h1>
+
+        <div class="login-form">
+            <h2 class="pwd">Connexion</h2>
+            <div class="field">
+                <label for="adminLogin">Identifiant :</label>
+                <input type="text" id="adminLogin" placeholder="Login">
+            </div>
+            <div class="field">
+                <label for="adminPassword">Mot de passe :</label>
+                <input type="password" id="adminPassword" placeholder="Mot de passe">
+            </div>
             <button id="loginButton">Se connecter</button>
         </div>
-    </section>
+    </main>
 </body>
 
 </html>

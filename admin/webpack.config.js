@@ -8,6 +8,8 @@ const isProduction = process.env.NODE_ENV === 'production';
 
 const stylesHandler = isProduction ? MiniCssExtractPlugin.loader : 'style-loader';
 
+const CopyWebpackPlugin = require('copy-webpack-plugin');
+
 const config = {
     entry: {
         main: './src/index.ts',
@@ -39,6 +41,11 @@ const config = {
             __API_PATH__: isProduction
                 ? JSON.stringify('https://192.168.75.88/api')
                 : JSON.stringify('http://localhost:3376')
+        }),
+        new CopyWebpackPlugin({
+            patterns: [
+                { from: 'src/icons', to: 'icons' }
+            ]
         }),
     ],
     module: {

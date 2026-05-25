@@ -45,7 +45,44 @@ export default defineConfig(({ mode }) => {
           ]
         },
         workbox: {
-          globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}']
+          offlineGoogleAnalytics: false,
+          navigateFallback: 'offline.html',
+          navigateFallbackDenylist: [/^\/api/],
+          // 4.1 Precaching - App shell
+          globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2,wasm}'],
+          // 4.2 Stratégie de cache
+          runtimeCaching: [
+            {
+              // 4.3 Tuiles Mapbox - Cache à la volée
+              urlPattern: /^https:\/\/api\.mapbox\.com\/.*/i,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'mapbox-tiles',
+                expiration: {
+                  maxEntries: 500,
+                  maxAgeSeconds: 60 * 60 * 24 * 30 // 30 jours
+                },
+                cacheableResponse: {
+                  statuses: [0, 200]
+                }
+              }
+            },
+            {
+              // Cache API game
+              urlPattern: /^http:\/\/localhost:3376\/.*/i,
+              handler: 'NetworkFirst',
+              options: {
+                cacheName: 'api-cache',
+                expiration: {
+                  maxEntries: 50,
+                  maxAgeSeconds: 60 * 5 // 5 minutes
+                },
+                cacheableResponse: {
+                  statuses: [0, 200]
+                }
+              }
+            }
+          ]
         }
       }),
     ],

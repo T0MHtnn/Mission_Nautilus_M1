@@ -1,0 +1,79 @@
+:root {
+    --color-bg: #081F1F;
+    --color-bg-soft: #3C473F;
+    --color-heading: #535C4A;
+    --color-text: #dfcba2;
+    --color-accent: #42b883;
+    --radius: 5px;
+    --radius-lg: 20px;
+}
+
+@font-face {
+    font-family: _h1_;
+    src: url('/fonts/Webfonts/PaytoneOne-Regular.woff');
+}
+
+@font-face {
+    font-family: _h2_;
+    src: url('/fonts/Forum-Regular.otf');
+}
+
+@font-face {
+    font-family: _normal_;
+    src: url('/fonts/Webfonts/RobotoSlab-Regular.woff');
+}
+
+body {
+    background-color: var(--color-bg);
+    background-image: url('/bg1.jpg');
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    background-blend-mode: screen;
+    color: var(--color-text);
+    font-family: _normal_;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    margin: 0;
+    text-align: center;
+}
+
+h1 {
+    color: var(--color-accent);
+    font-family: _h1_;
+    font-size: 2rem;
+    text-shadow: 3px 3px 5px ghostwhite;
+    margin-bottom: 0.5rem;
+}
+
+p {
+    color: var(--color-text);
+    margin: 1rem 0;
+    font-family: _h2_;
+}
+
+.icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+button {
+    margin-top: 2rem;
+    padding: 12px 24px;
+    background: var(--color-heading);
+    color: var(--color-text);
+    border: none;
+    border-radius: var(--radius-lg);
+    font-size: 1rem;
+    cursor: pointer;
+    font-weight: normal;
+    font-family: _normal_;
+    transition: background 0.2s;
+}
+
+button:hover {
+    background: var(--color-bg-soft);
+}
