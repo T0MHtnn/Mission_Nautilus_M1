@@ -6,6 +6,24 @@ let bubbles = [];
 let running = false;
 let animFrameId = null;
 let opts = {};
+let wasmUpdateBubbles = null;
+
+async function loadWasm() {
+    try {
+        const response = await fetch('/bubbles.wasm');
+        const buffer = await response.arrayBuffer();
+        const { instance } = await WebAssembly.instantiate(buffer, {
+            env: {
+                seed: () => Math.random() * Date.now(),
+                abort: () => { }
+            }
+        });
+        wasmUpdateBubbles = instance.exports.updateBubbles;
+        console.log('WASM chargé avec succès');
+    } catch (e) {
+        console.warn('WASM non disponible, fallback JS:', e);
+    }
+}
 
 function spawnBubbles(n) {
     for (let i = 0; i < n; i++) {
@@ -19,17 +37,22 @@ function spawnBubbles(n) {
     }
 }
 
+function updateBubblesJS() {
+    for (const b of bubbles) {
+        b.y -= b.speed * 0.6;
+        if (b.y < -10) b.y = height + 10;
+    }
+}
+
 function redraw() {
     ctx.clearRect(0, 0, width, height);
 
-    // Fond bleu
     const grad = ctx.createLinearGradient(0, 0, 0, height);
     grad.addColorStop(0, 'rgba(0,120,170,0.25)');
     grad.addColorStop(1, 'rgba(0,60,100,0.25)');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, width, height);
 
-    // Ondulations
     ctx.lineWidth = 2;
     ctx.strokeStyle = 'rgba(255,255,255,0.25)';
     ctx.beginPath();
@@ -40,11 +63,11 @@ function redraw() {
     }
     ctx.stroke();
 
-    // Bulles
+    // Mise à jour positions JS (WASM gère ses propres données en mémoire)
+    updateBubblesJS();
+
     for (let i = 0; i < bubbles.length; i++) {
         const b = bubbles[i];
-        b.y -= b.speed * 0.6;
-        if (b.y < -10) b.y = height + 10;
         ctx.beginPath();
         const grd = ctx.createRadialGradient(b.x, b.y, 2, b.x, b.y, b.r);
         grd.addColorStop(0, `rgba(255,255,255,${b.alpha})`);
@@ -63,7 +86,7 @@ function loop() {
     animFrameId = requestAnimationFrame(loop);
 }
 
-self.onmessage = function (e) {
+self.onmessage = async function (e) {
     const { type } = e.data;
 
     if (type === 'init') {
@@ -71,6 +94,7 @@ self.onmessage = function (e) {
         width = e.data.width;
         height = e.data.height;
         opts = e.data.opts;
+        await loadWasm();
         spawnBubbles(opts.bubbleCount);
         running = true;
         loop();
