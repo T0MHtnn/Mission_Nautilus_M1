@@ -4,6 +4,13 @@ import { calculateDistance } from '../utils/geo.js';
 import { eventLogger } from '../utils/logger.js';
 import { validateToken } from '../utils/auth.js';
 import { pushSubscriptions } from '../models/data.js';
+import webpush from 'web-push';
+
+webpush.setVapidDetails(
+	'mailto:admin@zanzibar.com',
+	'BKr5FQlZ4renFe3h1ekKUGzpmHjN7kEgyurP9L_8Xfg5wX-YaJUDqBR53wAnZ0uMJOktbWkYnMaBu8U_l0PMWa8',
+	'L4rG5TdgHXXy4xa_DmZdB7g5w3cBWgdIxg1M6osADEc'
+);
 
 const router = express.Router();
 
@@ -61,7 +68,17 @@ router.post('/position', validateToken, (req, res) => {
 		}
 
 		let user = gameState.players[login];
-		if (user.isDead) return res.status(403).json({ error: "Vous êtes mort.", type: "death" });
+		if (user.isDead) {
+			const payload = JSON.stringify({
+				title: '💀 Game Over',
+				body: 'Vous avez été dévoré par une créature !',
+				icon: '/icons/icon-192.png'
+			});
+			pushSubscriptions.forEach(sub => {
+				webpush.sendNotification(sub, payload).catch(err => console.error('Erreur push:', err));
+			});
+			return res.status(403).json({ error: "Vous avez été éliminé (dévoré)", type: "death" });
+		}
 		user.position = position;
 
 		const currentTime = Date.now();
@@ -305,6 +322,14 @@ router.post('/process-object', validateToken, (req, res) => {
 		if (['creature', 'monster', 'monstre'].includes(typeLower)) {
 			console.log(`💀 [DEATH] ${login} a touché une créature !`);
 			user.isDead = true;
+			const payload = JSON.stringify({
+				title: '💀 Game Over',
+				body: 'Vous avez été dévoré par une créature !',
+				icon: '/icons/icon-192.png'
+			});
+			pushSubscriptions.forEach(sub => {
+				webpush.sendNotification(sub, payload).catch(err => console.error('Erreur push:', err));
+			});
 			return res.status(403).json({
 				success: false,
 				error: "Vous avez été dévoré par une créature !",
