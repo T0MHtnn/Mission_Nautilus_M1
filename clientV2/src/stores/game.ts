@@ -20,9 +20,9 @@ interface GameApiResponse {
 
 export const useGameStore = defineStore("game", () => {
   // --- État ---
-  const token = ref<string | null>(localStorage.getItem("zanzibar_token"));
+  const token = ref<string | null>(localStorage.getItem("zanzibar_explorateur_token"));
   const logged = ref(!!token.value);
-  const login = ref(localStorage.getItem("zanzibar_login") || "");
+  const login = ref(localStorage.getItem("zanzibar_explorateur_login") || "");
   const isFetching = ref(false);
   const gameMessage = ref<{
     title: string;
@@ -131,16 +131,11 @@ export const useGameStore = defineStore("game", () => {
       }
 
       token.value = finalToken;
-      localStorage.setItem("zanzibar_token", finalToken);
-      localStorage.setItem("zanzibar_login", user);
+      localStorage.setItem("zanzibar_explorateur_token", finalToken);
+      localStorage.setItem("zanzibar_explorateur_login", user);
 
       login.value = user;
       logged.value = true;
-
-      const { requestPermission, subscribeToPush } = useNotifications()
-      await requestPermission()
-      await subscribeToPush()
-
 
       localPlayer.value.id = user;
       localPlayer.value.role = "explorateur";
@@ -153,6 +148,8 @@ export const useGameStore = defineStore("game", () => {
       objects.value = [];
       localPlayer.value.score = 0;
       await startPolling();
+      const { requestPermission, subscribeToPush } = useNotifications()
+      requestPermission().then(() => subscribeToPush())
       return { success: true };
     } catch {
       return {
@@ -190,12 +187,13 @@ export const useGameStore = defineStore("game", () => {
     isGameOver.value = false;
     locationError.value = null;
     isLocating.value = false;
-    localStorage.removeItem("zanzibar_token");
+    localStorage.removeItem("zanzibar_explorateur_token");
   }
 
   /** Lancer le GPS et attendre la première position avant de demarrer le polling */
   async function startWatchPosition(): Promise<void> {
     return new Promise((resolve, reject) => {
+      console.log('🌍 startWatchPosition démarré');
       if (!("geolocation" in navigator)) {
         locationError.value = "Le navigateur ne supporte pas la géolocalisation";
         return reject("Nav non supporté");
@@ -225,6 +223,7 @@ export const useGameStore = defineStore("game", () => {
 
       watchId = navigator.geolocation.watchPosition(
         (position) => {
+          console.log('📍 Position GPS reçue !', position.coords);
           const rawLat = position.coords.latitude;
           const rawLon = position.coords.longitude;
 
@@ -305,8 +304,8 @@ export const useGameStore = defineStore("game", () => {
       const endTime = performance.now();
       console.log(`Performance : Fix GPS obtenu en ${Math.round(endTime - startTime)}ms`);
     } catch (e) {
-      console.error("Échec de la géolocalisation: ", e);
-      return;
+      console.warn("GPS non disponible, utilisation de la position par défaut");
+      localPlayer.value.position = [45.75258, 4.87014];
     }
 
     updateGameState();
@@ -370,7 +369,15 @@ export const useGameStore = defineStore("game", () => {
       } else if (posRes.ok) {
         const posData = await posRes.json();
         if (posData.players) {
-          players.value = posData.players.filter((p: PlayerData) => p.role !== 'rival');
+          players.value = posData.players.filter((p: PlayerData) => {
+            if (p.role !== 'rival') return false;
+            return distanceMeters(localPlayer.value.position, p.position) < 10;
+          });
+          for (const id of capturedRivals) {
+            if (!posData.players.find((p: PlayerData) => p.id === id)) {
+              capturedRivals.delete(id);
+            }
+          }
         }
       }
 
@@ -508,10 +515,12 @@ export const useGameStore = defineStore("game", () => {
   }
 
   const processingObjects = new Set<string>()
+  const capturedRivals = new Set<string>()
 
   /** Vérifier la proximité avec les objets (< 5m) */
   async function checkProximity() {
     const pos = localPlayer.value.position;
+
     for (const obj of objects.value) {
       if (obj.discovered) continue;
       if (processingObjects.has(obj.id)) continue;
@@ -522,6 +531,41 @@ export const useGameStore = defineStore("game", () => {
         await processObject(obj.id);
         processingObjects.delete(obj.id);
       }
+    }
+
+    for (const player of players.value) {
+      if (player.role !== 'rival') continue;
+      if (capturedRivals.has(player.id)) continue;
+      const dist = distanceMeters(pos, player.position);
+      if (dist < 5) {
+        console.log(`🎯 Rival ${player.id} à portée !`);
+        capturedRivals.add(player.id);
+        await captureRival(player.id);
+      }
+    }
+  }
+
+  async function captureRival(rivalId: string) {
+    if (!token.value || isGameOver.value) return;
+    try {
+      const res = await fetch(`${API_BASE}/game/capture-rival`, {
+        method: 'POST',
+        headers: authHeaders.value,
+        body: JSON.stringify({ rivalId })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        localPlayer.value.score = data.newScore;
+        gameMessage.value = {
+          title: '🎯 Rival Capturé !',
+          body: `Score : ${data.newScore} (+10 bonus)`,
+          type: 'success'
+        };
+        const { sendNotification } = useNotifications()
+        sendNotification('🎯 Rival Capturé !', `Score : ${data.newScore}`)
+      }
+    } catch (e) {
+      console.warn('Erreur capture rival:', e);
     }
   }
 
@@ -565,16 +609,16 @@ export const useGameStore = defineStore("game", () => {
           navigator.vibrate([200, 100, 200]);
         }
 
-        // Cas Artefact
+        // Cas Trésor
         localPlayer.value.score = data.newScore;
         gameMessage.value = {
-          title: "💎 Artefact Récupéré !",
+          title: "💎 Trésor Récupéré !",
           body: `Score : ${data.newScore}`,
           type: "success",
         };
 
         //Notification
-        sendNotification('💎 Artefact Récupéré !', `Score : ${data.newScore}`)
+        sendNotification('💎 Trésor Récupéré !', `Score : ${data.newScore}`)
       }
     } catch (e) {
       console.warn("Erreur réseau lors du traitement de l'objet", e);
@@ -597,19 +641,18 @@ export const useGameStore = defineStore("game", () => {
     }
   }
 
-  /** Correction: Etalonnage et mise à jour du vecteur de calibration */
+  /** Réinitialise le vecteur de calibration à zéro (recentre sur la vraie position GPS) */
   function calibratePosition(targetLat: number, targetLng: number) {
     if (!lastRawPosition.value) return;
     calibrationVector.value = [
       targetLat - lastRawPosition.value[0],
       targetLng - lastRawPosition.value[1]
     ];
-    // Met a jour immediatement le localPlayer
     localPlayer.value.position = [
       lastRawPosition.value[0] + calibrationVector.value[0],
       lastRawPosition.value[1] + calibrationVector.value[1]
     ];
-    console.log(`🔧 Calibration ! Nouveau vecteur: [${calibrationVector.value[0]}, ${calibrationVector.value[1]}]`);
+    console.log(`Calibration ! Nouveau vecteur: [${calibrationVector.value[0]}, ${calibrationVector.value[1]}]`);
   }
 
   /** Fermer le message de jeu */
@@ -650,6 +693,7 @@ export const useGameStore = defineStore("game", () => {
     sendPosition,
     distanceMeters,
     checkProximity,
+    captureRival,
     processObject,
     updateProfile,
     calibratePosition,

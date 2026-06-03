@@ -18,8 +18,7 @@ const config = {
     output: {
         filename: '[name].bundle.js',
         path: path.resolve(__dirname, 'dist'),
-        // Important pour que les assets soient cherchés au bon endroit sur la VM
-        publicPath: isProduction ? '/admin/' : '/',
+        publicPath: isProduction ? '/secret/' : '/',
     },
     devServer: {
         open: true,

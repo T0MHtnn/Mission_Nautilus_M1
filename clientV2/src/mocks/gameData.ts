@@ -49,7 +49,7 @@ export const mockObjects: GameObject[] = [
   {
     id: "obj2",
     position: [45.782, 4.8659],
-    type: "artefact",
+    type: "tresor",
     ttl: 60,
     discovered: false,
   },
@@ -91,6 +91,6 @@ export const mockZRR: ZRR = {
 export const mockLocalPlayer = {
   id: "moi",
   position: [45.78207, 4.86559] as [number, number],
-  role: "rival" as "explorateur" | "rival",
+  role: "explorateur" as "explorateur" | "rival",
   score: 0,
 };

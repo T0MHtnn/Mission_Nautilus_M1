@@ -83,17 +83,12 @@ const localPlayerIcon = (heading: number = 0) => L.divIcon({
   iconAnchor: [9, 9],
 });
 
-const objectIcon = (discovered: boolean) =>
+const objectIcon = (type: string, discovered: boolean) =>
   L.divIcon({
     className: "custom-marker",
-    html: `<div style="
-      background: ${discovered ? "#FF9800" : "#9C27B0"};
-      width: 12px; height: 12px;
-      border: 2px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.5);
-      ${discovered ? "border-radius: 2px;" : "border-radius: 50%;"}
-    "></div>`,
-    iconSize: [12, 12],
-    iconAnchor: [6, 6],
+    html: `<div style="font-size: 20px; line-height: 1;">${type === 'creature' || type === 'monster' ? '👹' : '💎'}</div>`,
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
   });
 
 export default {
@@ -193,7 +188,7 @@ export default {
 
       for (const obj of this.store.objects) {
         const marker = L.marker([obj.position[0], obj.position[1]], {
-          icon: objectIcon(obj.discovered),
+          icon: objectIcon(obj.type, obj.discovered),
         }).addTo(map);
 
         let popupContent = "";
@@ -315,8 +310,9 @@ export default {
 
     // Appui long / Context menu pour calibrer
     this.map.on("contextmenu", (e: LeafletMouseEvent) => {
-      this.store.calibratePosition(e.latlng.lat, e.latlng.lng);
-      alert(`Calibration enregistrée aux coordonnées : ${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`);
+      const rawPos = this.store.localPlayer.position;
+      this.store.calibratePosition(rawPos[0], rawPos[1]);
+      alert(`Calibration réinitialisée à votre position GPS actuelle`);
     });
 
     // Pour mobile, on implémente un timer mousedown/mouseup

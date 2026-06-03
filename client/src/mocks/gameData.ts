@@ -48,7 +48,7 @@ export const mockObjects: GameObject[] = [
   {
     id: "obj2",
     position: [45.782, 4.8659],
-    type: "artefact",
+    type: "tresor",
     ttl: 60,
     discovered: false,
   },

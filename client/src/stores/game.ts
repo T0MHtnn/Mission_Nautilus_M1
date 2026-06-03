@@ -16,9 +16,9 @@ interface GameApiResponse {
 
 export const useGameStore = defineStore("game", () => {
   // --- État ---
-  const token = ref<string | null>(localStorage.getItem("zanzibar_token"));
+  const token = ref<string | null>(localStorage.getItem("zanzibar_rival_token"));
   const logged = ref(!!token.value);
-  const login = ref(localStorage.getItem("zanzibar_login") || "");
+  const login = ref(localStorage.getItem("zanzibar_rival_login") || "");
   const isFetching = ref(false);
   const gameMessage = ref<{
     title: string;
@@ -126,8 +126,8 @@ export const useGameStore = defineStore("game", () => {
       }
 
       token.value = finalToken;
-      localStorage.setItem("zanzibar_token", finalToken);
-      localStorage.setItem("zanzibar_login", user);
+      localStorage.setItem("zanzibar_rival_token", finalToken);
+      localStorage.setItem("zanzibar_rival_login", user);
       login.value = user;
       logged.value = true;
       localPlayer.value.id = user;
@@ -177,7 +177,7 @@ export const useGameStore = defineStore("game", () => {
     isGameOver.value = false;
     locationError.value = null;
     isLocating.value = false;
-    localStorage.removeItem("zanzibar_token");
+    localStorage.removeItem("zanzibar_rival_token");
   }
 
   /** Lancer le GPS et attendre la première position avant de demarrer le polling */
@@ -340,7 +340,7 @@ export const useGameStore = defineStore("game", () => {
       if (posRes.ok) {
         const posData = await posRes.json();
         if (posData.players) {
-          players.value = posData.players;
+          players.value = posData.players.filter((p: PlayerData) => p.role === 'explorateur');
         }
       }
 
@@ -412,9 +412,14 @@ export const useGameStore = defineStore("game", () => {
         }),
       });
       if (res.status === 403) {
+        let errorData: any = {};
+        try { errorData = await res.json(); } catch { }
+        const msg = errorData.type === 'captured'
+          ? "Vous avez été capturé par un explorateur !"
+          : "Une créature vous a intercepté !";
         gameMessage.value = {
           title: "💀 GAME OVER",
-          body: "Une créature vous a intercepté !",
+          body: msg,
           type: "error",
         };
         isGameOver.value = true;
@@ -493,10 +498,10 @@ export const useGameStore = defineStore("game", () => {
           navigator.vibrate([200, 100, 200]);
         }
 
-        // Cas Artefact
+        // Cas Trésor
         localPlayer.value.score = data.newScore;
         gameMessage.value = {
-          title: "💎 Artefact Récupéré !",
+          title: "💎 Trésor Récupéré !",
           body: `Score : ${data.newScore}`,
           type: "success",
         };
@@ -522,19 +527,18 @@ export const useGameStore = defineStore("game", () => {
     }
   }
 
-  /** 1.3 Correction: Etalonnage et mise à jour du vecteur de calibration */
+  /** Réinitialise le vecteur de calibration à zéro (recentre sur la vraie position GPS) */
   function calibratePosition(targetLat: number, targetLng: number) {
     if (!lastRawPosition.value) return;
     calibrationVector.value = [
       targetLat - lastRawPosition.value[0],
       targetLng - lastRawPosition.value[1]
     ];
-    // Met a jour immediatement le localPlayer
     localPlayer.value.position = [
       lastRawPosition.value[0] + calibrationVector.value[0],
       lastRawPosition.value[1] + calibrationVector.value[1]
     ];
-    console.log(`🔧 Calibration ! Nouveau vecteur: [${calibrationVector.value[0]}, ${calibrationVector.value[1]}]`);
+    console.log(`Calibration ! Nouveau vecteur: [${calibrationVector.value[0]}, ${calibrationVector.value[1]}]`);
   }
 
   /** Fermer le message de jeu */

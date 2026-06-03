@@ -44,7 +44,6 @@ export default {
     <div v-else>
       <HelloWorld msg="Vous êtes connecté - Interface Rival" />
       <nav class="nav-bar">
-        <RouterLink to="/">Accueil</RouterLink>
         <RouterLink to="/map">Carte</RouterLink>
         <RouterLink to="/profile">Profil</RouterLink>
         <button @click="handleLogout">Se déconnecter</button>

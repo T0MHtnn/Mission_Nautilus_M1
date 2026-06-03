@@ -105,5 +105,6 @@ Swagger : http://localhost:8080/swagger-ui/index.html
 
 **********************
 SwaggerVM : https://192.168.75.88:8443/swagger-ui/index.html
-AdminVM: https://192.168.75.88/admin/login.html
-Client: https://192.168.75.88/
+AdminVM: https://192.168.75.88/secret/login.html
+Client Rivaux: https://192.168.75.88/
+Client Explorateurs: https://192.168.75.88/v2

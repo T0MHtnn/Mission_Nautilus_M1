@@ -203,24 +203,30 @@ export default {
       const map = this.map as LeafletMap;
       for (const m of this.objectMarkers) m.remove();
       this.objectMarkers = [];
+      for (const c of this.uncertaintyCircles) c.remove();
+      this.uncertaintyCircles = [];
 
       for (const obj of this.store.objects) {
-        const marker = L.marker([obj.position[0], obj.position[1]], {
-          icon: objectIcon(obj.discovered),
-        }).addTo(map);
-
-        let popupContent = "";
-
         if (obj.discovered) {
-          popupContent = `<strong>${obj.id}</strong><br>Type : ${obj.type}<br><em>${t('discovered')}</em>`;
+          // Objet découvert : marker classique
+          const marker = L.marker([obj.position[0], obj.position[1]], {
+            icon: objectIcon(true),
+          }).addTo(map);
+          marker.bindPopup(`TTL : ${Math.round(obj.ttl)}s`);
+          this.objectMarkers.push(marker);
         } else {
-          const isMonster = ["creature", "monster"].includes(obj.type.toLowerCase());
-          popupContent = `<strong>${isMonster ? '⚠️ Danger' : 'Objet Inconnu'}</strong><br>` +
-                        `TTL : ${Math.round(obj.ttl)}s`;
+          // Objet non découvert : cercle de 10m, transparent, bordure colorée
+          const circle = L.circle([obj.position[0], obj.position[1]], {
+            radius: 10,
+            color: '#9C27B0',
+            weight: 2,
+            fillColor: 'transparent',
+            fillOpacity: 0,
+            interactive: true
+          }).addTo(map);
+          circle.bindPopup(`TTL : ${Math.round(obj.ttl)}s`);
+          this.uncertaintyCircles.push(circle);
         }
-
-        marker.bindPopup(popupContent);
-        this.objectMarkers.push(marker);
       }
     },
 
@@ -251,7 +257,6 @@ export default {
       if (!this.map) return;
       this.drawZRR();
       this.drawPlayers();
-      this.drawUncertaintyCircles();
       this.drawObjects();
       this.drawLocalPlayer();
     },
@@ -285,25 +290,6 @@ export default {
       }
     },
 
-    drawUncertaintyCircles() {
-      const map = this.map as LeafletMap;
-      
-      for (const c of this.uncertaintyCircles) c.remove();
-      this.uncertaintyCircles = [];
-
-      for (const obj of this.store.undiscoveredObjects) {
-        const circle = L.circle([obj.position[0], obj.position[1]], {
-          radius: 100,
-          color: '#9C27B0',
-          fillColor: '#9C27B0',
-          fillOpacity: 0.15,
-          weight: 1,
-          interactive: false
-        }).addTo(map);
-        
-        this.uncertaintyCircles.push(circle);
-      }
-    },
     async shareScore() {
       const score = this.store.localPlayer.score
       const text = `Mission Zanzibar - J'ai un score de ${score} points ! Peux-tu faire mieux ? #ZanzibarMobile`
@@ -375,8 +361,9 @@ export default {
 
     // Appui long / Context menu pour calibrer
     this.map.on("contextmenu", (e: LeafletMouseEvent) => {
-      this.store.calibratePosition(e.latlng.lat, e.latlng.lng);
-      alert(`Calibration enregistrée aux coordonnées : ${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`);
+      const rawPos = this.store.localPlayer.position;
+      this.store.calibratePosition(rawPos[0], rawPos[1]);
+      alert(`Calibration réinitialisée à votre position GPS actuelle`);
     });
 
     // Pour mobile, on implémente un timer mousedown/mouseup

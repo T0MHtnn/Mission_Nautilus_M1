@@ -90,6 +90,10 @@ router.post('/position', validateToken, (req, res) => {
 			user.isOutOfZone = !inside;
 		}
 
+		if (user.isCaptured) {
+			return res.status(403).json({ error: "Vous avez été capturé par un explorateur !", type: "captured" });
+		}
+
 		// Check Mort par créature
 		gameState.objects.forEach(obj => {
 			if (['creature', 'monster'].includes(obj.type.toLowerCase())) {
@@ -125,7 +129,7 @@ router.post('/position', validateToken, (req, res) => {
 
 				// Brouillage pour explorateur
 				if (user.role === 'explorateur' && user.position) {
-					const dist = 0.0001;
+					const dist = 0.00009;
 					finalPos = [
 						obj.position[0] + (Math.random() - 0.5) * dist,
 						obj.position[1] + (Math.random() - 0.5) * dist
@@ -135,7 +139,7 @@ router.post('/position', validateToken, (req, res) => {
 				return {
 					id: obj.id,
 					position: finalPos,
-					type: obj.type,
+					type: user.role === 'explorateur' ? 'inconnu' : obj.type,
 					ttl: Math.max(0, obj.ttl - elapsed)
 				};
 			});
@@ -237,7 +241,7 @@ router.get('/resources', validateToken, (req, res) => {
 
 				//Position floue pour les explorateurs
 				if (user.role === 'explorateur') {
-					const dist = Math.random() * 0.0001;
+					const dist = Math.random() * 0.00009;
 					const angle = Math.random() * 2 * Math.PI;
 					finalPosition = [
 						obj.position[0] + Math.cos(angle) * dist,
@@ -257,7 +261,7 @@ router.get('/resources', validateToken, (req, res) => {
 				return {
 					id: obj.id,
 					position: finalPosition,
-					type: obj.type,
+					type: user.role === 'explorateur' ? 'inconnu' : obj.type,
 					ttl: Math.max(0, obj.ttl - elapsed)
 				};
 			});
@@ -422,6 +426,8 @@ router.post('/capture-rival', validateToken, (req, res) => {
 		// Capturer le rival
 		user.score = (user.score || 0) + 10; // Bonus pour capture
 		user.rivalsCaptuered = (user.rivalsCaptuered || 0) + 1;
+		rival.isCaptured = true;
+		rival.isDead = true;
 
 		eventLogger.info(`${login} (explorateur) a capturé le rival ${rivalId} - Nouveau score: ${user.score}`);
 

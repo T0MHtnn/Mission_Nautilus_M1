@@ -144,7 +144,7 @@ router.post('/spawn-object', validateToken, requireAdmin, (req, res) => {
 		const newObj = {
 			id: `obj_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
 			position: position,
-			type: type || 'artefact',
+			type: type || 'tresor',
 			ttl: gameState.defaultTTL,
 			createdAt: Date.now()
 		};

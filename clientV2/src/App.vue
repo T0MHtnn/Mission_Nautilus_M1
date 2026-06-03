@@ -14,6 +14,10 @@ export default {
     loadPreferences()
     const { startLightSensor } = useTheme()
     startLightSensor()
+
+    if (store.token) {
+      store.startPolling()
+    }
   },
   computed: {
     store() {
