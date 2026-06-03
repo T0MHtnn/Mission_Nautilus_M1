@@ -4,7 +4,7 @@ stages:
   - build_test
   - deploy
 
-# --- ÉTAPE 1 : TESTS ET BUILDS (Inchangé, c'est OK) ---
+# --- ÉTAPE 1 : TESTS ET BUILDS ---
 test-api:
   stage: build_test
   script:
@@ -40,8 +40,21 @@ build-tp4:
   only:
     - main
 
-# --- ÉTAPE 2 : DÉPLOIEMENT ---
+# --- BUILD DU NOUVEAU CLIENT V2 ---
+build-clientV2:
+  stage: build_test
+  script:
+    - cd clientV2  # /!\ Vérifie bien que le dossier s'appelle exactement comme ça dans ton Git
+    - npm install
+    - npm run build
+  artifacts:
+    paths:
+      - clientV2/dist/
+    expire_in: 1 hour
+  only:
+    - main
 
+# --- ÉTAPE 2 : DÉPLOIEMENT ---
 deploy-all:
   stage: deploy
   image: alpine:latest
@@ -54,19 +67,23 @@ deploy-all:
     - echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config
 
   script:
-    # 1. Création forcée du dossier admin sur la VM (au cas où)
-    - ssh gitlabci@192.168.75.88 "mkdir -p /var/www/html/admin"
+    # 1. Création forcée de TOUS les sous-dossiers sur la VM (au cas où ils n'existent pas)
+    - ssh gitlabci@192.168.75.88 "mkdir -p /var/www/html/admin /var/www/html/v2"
 
-    # 2. Déploiement du client Vue (TP4) à la RACINE d'abord
-    # On utilise --exclude 'admin/' pour que rsync ne touche PAS au dossier admin
+    # 2. Déploiement du client Vue principal (TP4) à la RACINE
+    # TRÈS IMPORTANT : On ajoute --exclude 'v2/' pour éviter que rsync ne supprime le dossier v2 !
     - echo "Déploiement du client Vue à la racine..."
-    - rsync -avz --delete --exclude 'admin/' client/dist/ gitlabci@192.168.75.88:/var/www/html/
+    - rsync -avz --delete --exclude 'admin/' --exclude 'v2/' client/dist/ gitlabci@192.168.75.88:/var/www/html/
 
-    # 3. Déploiement du client Admin (TP3) dans son SOUS-DOSSIER ensuite
+    # 3. Déploiement du client Admin (TP3) dans son sous-dossier /admin/
     - echo "Déploiement du client Admin dans /admin/..."
     - rsync -avz --delete admin/dist/ gitlabci@192.168.75.88:/var/www/html/admin/
+
+    # 4. Déploiement du client V2 (le nouveau) dans son sous-dossier /v2/
+    - echo "Déploiement du client V2 dans /v2/..."
+    - rsync -avz --delete clientV2/dist/ gitlabci@192.168.75.88:/var/www/html/v2/
     
-    # 4. Déploiement de l'API Node.js
+    # 5. Déploiement de l'API Node.js (Inchangé)
     - echo "Déploiement de l'API Express..."
     - rsync -avz --no-t --delete --exclude 'node_modules' API/ gitlabci@192.168.75.88:/opt/express/
     - ssh gitlabci@192.168.75.88 "cd /opt/express && npm install --production && (pm2 restart zanzibar-api || pm2 start index.js --name zanzibar-api)"
