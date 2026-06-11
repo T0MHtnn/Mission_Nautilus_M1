@@ -1,3 +1,8 @@
+## **Améliorations / Fonctionnalités bonus**
+- Refonte du css de toute l'app
+- Création d'un logo (sur les onglets de l'app + sur la PWA)
+- La page de profil avec la possibilité de modifier ses informations / voir ses statistiques de jeu
+
 # **Zanzibar API**
 ### Serveur de jeu de piste géolocalisé développé en Node.js avec Express. Il gère la logique métier, la sécurité via un backoffice Java et la persistance de l'état du jeu en mémoire.
 
