@@ -1,115 +1,96 @@
-## **Améliorations / Fonctionnalités bonus**
-- Refonte du css de toute l'app
-- Création d'un logo (sur les onglets de l'app + sur la PWA)
-- La page de profil avec la possibilité de modifier ses informations / voir ses statistiques de jeu
+# Mission Nautilus
 
-# **Zanzibar API**
-### Serveur de jeu de piste géolocalisé développé en Node.js avec Express. Il gère la logique métier, la sécurité via un backoffice Java et la persistance de l'état du jeu en mémoire.
+A web application developed in pairs during the 2nd semester of my first year of a Master's degree in Computer Science.
 
+## About the Project
 
-**Installation**
+Mission Nautilus is a real-time geolocation game set in a fictional underwater universe. Players are split into two rival teams — **Explorers** and **Rivals** — competing to locate and secure mysterious artefacts hidden across a defined underwater zone called the **Zanzibar Research Range (ZRR)**.
 
+Inspired by Captain Nemo's legendary *Nautilus*, the game challenges Explorers to protect artefacts from Rivals by reaching them first and securing them, while avoiding dangerous marine creatures scattered across the map. A game master (the *Master of the Abyss*) oversees the whole session, spawning objects in real time and monitoring both teams.
 
- 1 -Extraire l'archive.
+The application consists of three main parts:
+- A **REST API** handling game logic, player positions, artefact management, and alerts
+- An **admin web client** for the game master to control the session
+- A **mobile Progressive Web App** for players in the field, featuring real-time geolocation and dynamic mission updates
 
- 2 - Installer les dépendances :
-    npm install
+## Screenshots
 
-**Lancement**
+### Admin interface — Game master control panel
+![Admin map](screenshots/mapAdmin.png)
+![Admin settings](screenshots/settingsAdmin.png)
 
+### Explorer interface — Player view
+![Explorer map](screenshots/mapExplo.png)
+![Explorer profile](screenshots/profileExplo.png)
 
- 1 - Démarrer le serveur d'authentification Java fourni :
-    java -jar users.jar
+### Login pages
+| Admin | Explorer |
+|-------|----------|
+| ![Login admin](screenshots/loginPageAdmin.png) | ![Login explorer](screenshots/loginPageExplo.png) |
 
- 2 - Démarrer le serveur Node.js (lance automatiquement ESLint) :
-    npm start
+## Tech Stack
 
+| Layer | Technology |
+|-------|-----------|
+| Frontend | Vue.js |
+| Backend | Node.js / Express |
+| Auth | JWT (via a provided authentication server) |
+| Deployment | VM + Nginx reverse proxy + CI/CD |
 
+## Getting Started
 
-**Fonctionnalités Implémentées**
+### Prerequisites
+- Node.js (v18+)
+- npm
+- Java (for the authentication server)
 
-*Sécurité & Authentification*
- - Validation Backoffice : Chaque requête est validée auprès du serveur Java via GET /authenticate avec vérification de l'origine.
+### Installation
 
- - Gestion des Rôles : Accès restreint aux routes /admin (rôle admin) et gestion des types explorer / rival.
+```bash
+# Clone the repository
+git clone https://github.com/T0MHtnn/Mission_Nautilus_M1.git
+cd Mission_Nautilus_M1
 
+# Install API dependencies
+cd API && npm install
 
-*Logique Spatiale*
+# Install admin client dependencies
+cd ../admin && npm install
 
- - ZRR (Zone à Régime Restreint) : Définition d'un périmètre rectangulaire. Alerte dynamique dans la réponse JSON si un joueur sort de la zone.
+# Install player client dependencies
+cd ../client && npm install
+```
 
- - Radar & Floutage :
+### Running the app
 
-   - Filtre de proximité (500m) pour les ressources.
+Open 5 terminals from the project root:
 
-   - Floutage des positions des objets pour les explorateurs.
+```bash
+# 1. Authentication server (Java)
+java -jar users.jar --app.origin=http://localhost:5173
 
-   - Positions réelles pour les rivaux.
+# 2. API
+cd API && npm start
 
+# 3. Admin client
+cd admin && npm run serve
 
-*Gameplay*
+# 4. Rivals client
+cd client && npm run dev
 
- - Collecte : Système de score pour les explorateurs lors du ramassage d'artefacts.
+# 5. Explorers client
+cd clientV2 && npm run dev
+```
 
- - Menaces : Détection des "créatures féroces". Élimination immédiate (status 403) si un joueur approche à moins de 5m.
+### Access
 
- - Alertes : Notification si un rival se trouve à moins de 25m d'un objet.
+| Interface | URL |
+|-----------|-----|
+| Swagger API docs | http://localhost:8080/swagger-ui/index.html |
+| Admin client | http://localhost:8080/secret/login.html |
+| Rivals client | http://localhost:5173 |
+| Explorers client | http://localhost:5174 |
 
- - Persistance : Gestion du TTL (Time To Live) sur les objets créés par l'administrateur.
+## Authors
 
-
-**Structure du Projet**
-
-
- - index.js : Point d'entrée et configuration Express.
-
- - routes/ : Définition des endpoints admin et game.
-
- - models/ : Contient la définition des structures de données et l'état global du jeu (`gameState`).
-
- - utils/ : Fonctions utilitaires, incluant la logique de calcul de distance, les middlewares d'authentification (`auth.js`) et
-            le logger.
-
- - public/ : Dossier destiné aux ressources statiques (préparation pour le TP3).
-
- - log/ : Fichiers de logs techniques et métier.
-
-
-## **Tests Unitaires (TP3)**
-
-
-L'API a été testée en utilisant **Jasmine**. Les tests couvrent les points suivants :
-
-### **Côté API (Serveur)**
-  * Utilisation de Jasmine en mode ES Modules.
-
-  * Tests de la logique métier exportée dans src/logic.js.
-
-  * Validation des règles de gestion de la ZRR et du TTL.
-
-### **Côté Admin (Client)**
-  * Tests des utilitaires de conversion de données.
-
-  * Vérification de la récupération des bounds de la carte.
-
-
-## **Pour lancer les tests localement :**
-
-1. ```cd API && npm test```
-2. ```cd admin && npm test```
-
-
-
-
-Lancer :
-API node : npm start                                              -> cd /Web_avancee/API
-Front admin : npm run serve                                       -> cd /Web_avancee/admin
-Front client : npm run dev                                        -> cd /Web_avancee/client
-JAR : java -jar users.jar --app.origin=http://localhost:5173      -> cd /Web_avancee
-Swagger : http://localhost:8080/swagger-ui/index.html
-
-**********************
-SwaggerVM : https://192.168.75.88:8443/swagger-ui/index.html
-AdminVM: https://192.168.75.88/secret/login.html
-Client Rivaux: https://192.168.75.88/
-Client Explorateurs: https://192.168.75.88/v2
+Developed in pairs as part of a Master 1 academic project.
